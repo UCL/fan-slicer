@@ -23,18 +23,7 @@ susi
 
 Author: Ester Bonmati
 
-susi is part of the `scikit-surgery`_ software project, developed at the `Wellcome EPSRC Centre for Interventional and Surgical Sciences`_, part of `University College London (UCL)`_.
-
-susi supports Python 2.7 and Python 3.6.
-
-susi is currently a demo project, which will add/multiply two numbers. Example usage:
-
-::
-
-    python susi.py 5 8
-    python susi.py 3 6 --multiply
-
-Please explore the project structure, and implement your own functionality.
+Simulation of UltraSound Images (SUSI) is developed at the `Wellcome EPSRC Centre for Interventional and Surgical Sciences`_, part of `University College London (UCL)`_.
 
 Developing
 ----------
@@ -49,24 +38,34 @@ You can clone the repository using the following command:
     git clone https://weisslab.cs.ucl.ac.uk/susi/susi
 
 
+Adding dependencies
+^^^^^^^^^^^^^^^^^^^
+
+Dependencies must be specified in requirements.txt, as this is used
+by tox to automatically install the dependencies in a clean virtual
+env in ```susi/.tox```.
+
+
 Running tests
 ^^^^^^^^^^^^^
-Pytest is used for running unit tests:
+Pytest is used for running unit tests, but it is run via tox:
 ::
 
-    pip install pytest
-    python -m pytest
+    git clone https://weisslab.cs.ucl.ac.uk/susi/susi.git
+    cd susi
+    tox
+
+and tox will install all dependencies then run pytest and pylint.
 
 
 Linting
 ^^^^^^^
-
-This code conforms to the PEP8 standard. Pylint can be used to analyse the code:
+This code conforms to the PEP8 standard. Pylint is used to analyse the code,
+but again, it is run via tox:
 
 ::
 
-    pip install pylint
-    pylint --rcfile=tests/pylintrc susi
+    tox -e lint
 
 
 Installing
