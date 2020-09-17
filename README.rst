@@ -68,6 +68,16 @@ but again, it is run via tox:
     tox -e lint
 
 
+Documentation
+^^^^^^^^^^^^^
+Documentation is generated via Sphinx, but again ... you guessed it,
+you run it via tox.
+
+::
+
+    tox -e docs
+
+
 Installing
 ----------
 
@@ -89,7 +99,6 @@ Useful links
 ^^^^^^^^^^^^
 
 * `Source code repository`_
-* `Documentation`_
 
 
 Licensing and copyright
@@ -107,7 +116,6 @@ Supported by `Wellcome`_ and `EPSRC`_.
 
 .. _`Wellcome EPSRC Centre for Interventional and Surgical Sciences`: http://www.ucl.ac.uk/weiss
 .. _`source code repository`: https://weisslab.cs.ucl.ac.uk/susi/susi
-.. _`Documentation`: https://susi.readthedocs.io
 .. _`scikit-surgery`: https://github.com/UCL/scikit-surgery/wiki
 .. _`University College London (UCL)`: http://www.ucl.ac.uk/
 .. _`Wellcome`: https://wellcome.ac.uk/
