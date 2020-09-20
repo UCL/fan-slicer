@@ -6,3 +6,6 @@ numpy
 ipykernel
 nbsphinx
 vtk
+matplotlib
+scipy
+pycuda
