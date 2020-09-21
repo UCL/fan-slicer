@@ -2,9 +2,10 @@
 
 """
 File that holds C++ CUDA kernels used for simulation
+of binary images using nearest neighbour
 """
 
-# pylint:disable=unused-import
+# pylint:disable=unused-import,duplicate-code
 
 import pycuda.autoinit
 from pycuda.compiler import SourceModule

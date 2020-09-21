@@ -532,8 +532,7 @@ def slice_volume(binary_volume,
         # Allocate an offset
         offset_array[0, 3*p_ind:3*(p_ind+1)] = pose[0:3, 1]
 
-    # 1-Run position computation kernel
-    # Assign outputs
+    # 1-Run position computation kernel, first assign it
     positions_2d = np.zeros((1, coord_w*coord_h*image_num*3))\
         .astype(np.float32)
     positions_3d_linear = np.zeros((1, coord_w*coord_h*image_num*3))\
