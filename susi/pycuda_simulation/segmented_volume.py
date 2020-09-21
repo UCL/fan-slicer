@@ -130,7 +130,10 @@ class SegmentedVolume:
                        image_num=1,
                        downsampling=1):
         """
-        Function that generates a binary image from a set of poses
+        Function that generates a binary image from a set of poses,
+        using the config loaded to the class. Outputs a colored image
+        array for visualisation, and an image where each int represents
+        a segmented model
         """
         # Get config parameters for the simulation
         fan_parameters = self.config["simulation"]["fan_geometry"]
@@ -606,6 +609,8 @@ def slice_volume(binary_volume,
     mask = mask[0, 0:image_dim[0]*image_dim[1]]
     mask = mask.reshape(image_dim[0], image_dim[1]).T
 
+    # Output a stack of images, where each z-slice has a plane,
+    # and the corresponding 3D positions, plus an outline of the fan
     return positions_3d, binary_image_array, mask
 
 

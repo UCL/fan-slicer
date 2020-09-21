@@ -218,6 +218,7 @@ def intensity_slice_volume(intensity_volume,
     # Get geometrical parameters
     if fan_parameters is None:
         # Default parameters for the plane geometry
+        # (The BK5000 ones)
         aperture_res = np.deg2rad(0.05)
         line_resolution = 0.1235
         angular_aperture = np.deg2rad(36)
@@ -367,4 +368,6 @@ def intensity_slice_volume(intensity_volume,
         # Allocate to output
         intensity_image_array[:, :, plane] = current_image
 
+    # Output a stack of images, where each z-slice has a plane,
+    # and the corresponding 3D positions
     return positions_3d, intensity_image_array
