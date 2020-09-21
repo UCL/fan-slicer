@@ -9,3 +9,5 @@ vtk
 matplotlib
 scipy
 pycuda
+nibabel
+pydicom
