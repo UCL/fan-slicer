@@ -6,6 +6,7 @@ Ultrasound planes in both segmented and original CT
 data.
 """
 
+
 import numpy as np
 import matplotlib.pyplot as plt
 import susi.pycuda_simulation.segmented_volume as svol
@@ -14,7 +15,7 @@ import susi.pycuda_simulation.intensity_volume as ivol
 
 # Load the segmented volume
 liver_volume = svol.SegmentedVolume(config_dir="config/models_binary_LUS_config.json",
-                                    mesh_dir='data_LUS/',
+                                    mesh_dir="data_LUS/",
                                     voxel_size=0.5)
 # Load the intensity volume
 ct_volume = ivol.IntensityVolume(config_dir="config/models_intensity_LUS_config.json",
@@ -23,9 +24,10 @@ ct_volume = ivol.IntensityVolume(config_dir="config/models_intensity_LUS_config.
 
 # Define a set of 100 poses, and slice generated volumes
 pose = np.array([[-0.46,	0.29, -0.84	, -41.77],
-[0.28, 0.94, 0.18, -47.72],
-[0.84, -0.15, -0.52, -253.44],
-[0, 0, 0, 1]])
+                 [0.28, 0.94, 0.18, -47.72],
+                 [0.84, -0.15, -0.52, -253.44],
+                 [0, 0, 0, 1]])
+
 poses = np.tile(pose, (1, 100))
 poses[2, 3:400:4] = poses[2, 3:400:4] - np.arange(0, 20, 0.2)
 
