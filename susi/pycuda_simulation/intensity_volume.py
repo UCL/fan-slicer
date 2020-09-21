@@ -1,6 +1,6 @@
 # coding=utf-8
 
-# pylint:disable=too-many-locals,too-many-branches,unsupported-assignment-operation)
+# pylint:disable=too-many-locals,unsupported-assignment-operation
 
 """
 Module with intensity volume class, to be used
@@ -28,8 +28,9 @@ class IntensityVolume:
                  config_dir='',
                  vol_dir='',
                  file_type='dicom'):
-        # Create class with intensity volume
-
+        """
+        Construct the volume class
+        """
         self.planar_resolution = None
         self.ct_volume = None
         self.voxel_size = None
@@ -43,6 +44,9 @@ class IntensityVolume:
             self.config = json.load(config_file)
         else:
             print("No valid config file")
+
+        # Check whether a nii or dicom is to be
+        # loaded
 
         if file_type == 'dicom':
             self.load_volume_from_dicom(vol_dir)
