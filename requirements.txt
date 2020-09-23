@@ -1,7 +1,10 @@
 # This file lists the python packages that your software depends on.
-# It is used by pip to manage software dependencies. It is not to be
-# confused with the software requirements, which are listed in
-# doc/requirements.rst
+# It is used by pip to manage software dependencies.
 numpy
 ipykernel
 nbsphinx
+vtk
+matplotlib
+scipy
+nibabel
+pydicom

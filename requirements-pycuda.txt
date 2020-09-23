@@ -1,0 +1,4 @@
+# This file lists the python packages that your software depends on
+# for development. It is used by pip to manage software dependencies.
+-r requirements-dev.txt
+pycuda

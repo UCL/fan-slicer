@@ -1,0 +1,6 @@
+[run]
+omit =
+        ./susi/_version.py
+        ./susi/__init__.py
+        ./susi/__main__.py
+        ./susi/ui/*.py

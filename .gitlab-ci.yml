@@ -62,6 +62,7 @@ test Linux:
   stage: test
   script:
     - tox
+    - tox -e pycuda
   tags:
     - shared-linux
   coverage: '/^TOTAL.*\s+(\d+\%)$/'
@@ -77,6 +78,7 @@ test Windows:
   stage: test
   script:
     - tox
+    - tox -e pycuda
   tags:
     - shared-win
 

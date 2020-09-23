@@ -3,4 +3,5 @@ omit =
         ./susi/_version.py
         ./susi/__init__.py
         ./susi/__main__.py
-        ./susi/ui/susi_command_line.py
+        ./susi/ui/*.py
+        ./susi/pycuda_simulation/*.py
