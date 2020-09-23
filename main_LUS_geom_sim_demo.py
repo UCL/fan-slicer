@@ -15,11 +15,11 @@ import susi.pycuda_simulation.intensity_volume as ivol
 
 # Load the segmented volume
 liver_volume = svol.SegmentedVolume(config_dir="config/models_binary_LUS_config.json",
-                                    mesh_dir="data_LUS/",
+                                    mesh_dir="data/data_LUS/",
                                     voxel_size=0.5)
 # Load the intensity volume
 ct_volume = ivol.IntensityVolume(config_dir="config/models_intensity_LUS_config.json",
-                                 vol_dir="data_LUS/CT_Dicom/000/",
+                                 vol_dir="data/data_LUS/CT_Dicom/000/",
                                  file_type="dicom")
 
 # Define a set of 100 poses, and slice generated volumes
