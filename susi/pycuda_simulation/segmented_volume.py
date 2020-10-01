@@ -586,7 +586,7 @@ def slice_volume(binary_volume,
     # Then run it
     map_kernel(drv.Out(binary_images), drv.Out(mask),
                drv.In(binary_maps), drv.In(positions_2d),
-               drv.In(np.array([coord_w, coord_h, image_num], dtype=int)),
+               drv.In(np.array([coord_w, coord_h, image_num], dtype=np.int32)),
                drv.In(image_bounding_box), drv.In(pixel_size),
                block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
 

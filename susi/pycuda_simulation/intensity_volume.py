@@ -344,7 +344,7 @@ def intensity_slice_volume(intensity_volume,
         int_reslicing_kernels.get_function('intensity_map_back')
     map_kernel(drv.Out(intensity_images), drv.Out(mask),
                drv.In(intensity_maps), drv.In(positions_2d),
-               drv.In(np.array([coord_w, coord_h, image_num], dtype=int)),
+               drv.In(np.array([coord_w, coord_h, image_num], dtype=np.int32)),
                drv.In(image_bounding_box), drv.In(pixel_size),
                block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
 
