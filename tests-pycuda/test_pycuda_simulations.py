@@ -45,7 +45,7 @@ def test_binary_image_sim():
     THIS TEST NEEDS PYCUDA
     """
     # Set config
-    config_dir = "config/models_binary_LUS_config.json"
+    config_dir = "tests-pycuda/config/models_binary_LUS_config.json"
     mesh_dir = "data/data_LUS/"
     # Load the segmented volume
     liver_volume = svol.SegmentedVolume(config_dir=config_dir,
@@ -91,7 +91,7 @@ def test_intensity_image_sim():
     THIS TEST NEEDS PYCUDA
     """
     # Set config
-    config_dir = "config/models_intensity_LUS_config.json"
+    config_dir = "tests-pycuda/config/models_intensity_LUS_config.json"
     vol_dir = "data/data_LUS/CT_Dicom/000/"
     # Load the segmented volume
     ct_volume = ivol.IntensityVolume(config_dir=config_dir,
