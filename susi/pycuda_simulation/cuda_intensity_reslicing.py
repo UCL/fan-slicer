@@ -16,8 +16,8 @@ from pycuda.compiler import SourceModule
 int_reslicing_kernels = SourceModule("""
 __global__ void transform(float *xyz_position, float *xy_position, const float *tracker_array, const float *offset_array, const float *curvilinear_params, const int image_number)
 {
-    int width = ceilf(curvilinear_params[2] / curvilinear_params[0]);
-    int height = ceilf(curvilinear_params[3] / curvilinear_params[1]);
+    int width = floorf(curvilinear_params[2] / curvilinear_params[0]);
+    int height = floorf(curvilinear_params[3] / curvilinear_params[1]);
 
     long int index = (blockIdx.x*blockDim.x + threadIdx.x) + (blockIdx.y*blockDim.y + threadIdx.y)*width + (blockIdx.z)*height*width + image_number*height*width*threadIdx.z;
 
