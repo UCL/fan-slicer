@@ -575,7 +575,7 @@ def slice_volume(binary_volume,
     # 3-Map pixels to fan like image
     pixel_size = np.array([line_resolution*downsampling,
                           line_resolution*downsampling]).astype(np.float32)
-    image_bounding_box = np.array([-image_dim[0] * pixel_size[0]/2,
+    image_bounding_box = np.array([-image_dim[0] * pixel_size[0]/2 * 1000,
                                    0, image_dim[0],
                                    image_dim[1]]).astype(np.float32)
     # Allocate output images
@@ -585,9 +585,9 @@ def slice_volume(binary_volume,
     map_kernel = cuda_reslicing.reslicing_kernels.get_function('map_back')
     # Then run it
     map_kernel(drv.Out(binary_images), drv.Out(mask),
-               drv.In(binary_maps), drv.In(positions_2d),
+               drv.In(binary_maps), drv.In(positions_2d*1000),
                drv.In(np.array([coord_w, coord_h, image_num], dtype=np.int32)),
-               drv.In(image_bounding_box), drv.In(pixel_size),
+               drv.In(image_bounding_box), drv.In(pixel_size*1000),
                block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
 
     # Create a volume with generated images
