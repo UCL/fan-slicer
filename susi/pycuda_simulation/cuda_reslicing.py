@@ -149,57 +149,51 @@ __global__ void map_back(int *binary_images, bool *binary_masks, const int *curv
     box[1] = image_bounding_box[1];
     box[2] = box[0] + image_bounding_box[2]*pixel_size[0];
     box[3] = box[1] + image_bounding_box[3]*pixel_size[1];
-
-    float pixelised_point[2];
-    /* First for X coordinate*/
-    if (abs(plane_array[index] - floorf(plane_array[index] / pixel_size[0])*pixel_size[0])<pixel_size[0] / 2)
-    {
-        pixelised_point[0] = floorf(plane_array[index] / pixel_size[0])*pixel_size[0];
-    }
-    else
-    {
-        pixelised_point[0] = ceilf(plane_array[index] / pixel_size[0])*pixel_size[0];
-    }
-
-    /* Second for Y coordinate*/
-    if (abs(plane_array[index + vol_size] - floorf(plane_array[index + vol_size] / pixel_size[1])*pixel_size[1])<pixel_size[1] / 2)
-    {
-        pixelised_point[1] = floorf(plane_array[index + vol_size] / pixel_size[1])*pixel_size[1];
-    }
-    else
-    {
-        pixelised_point[1] = ceilf(plane_array[index + vol_size] /pixel_size[1])*pixel_size[1];
-    }
-
-    /*Now that value is pixelised, get corresponding binary one*/
-    int x_index, y_index;
-    unsigned int total_index;
-    int intersection_value;
-    /* Check if the voxelised point is within bounding box boundaries*/
     
-    if ((pixelised_point[0] > box[0] && pixelised_point[0]<box[2]) && (pixelised_point[1]>box[1] && pixelised_point[1] < box[3]))
-    {
-
-        /* Find where the voxels are located in the binary surface voxelised grid */
-        x_index = (int)((pixelised_point[0] - box[0]) / pixel_size[0]);
-        y_index = (int)((pixelised_point[1] - box[1]) / pixel_size[1]);
-
-        /* Get the boolean value of surface in this index */
-        intersection_value = curvilinear_binary[index];
+    /* Get current point in 2D space */
+    float current_point[2];
+    current_point[0] = plane_array[index];
+    current_point[1] = plane_array[index + vol_size]; 
+    
+    /* Calculate the reference pixel in the square that will interpolate the result*/
+    float ref_pixelised_point[2];
+    ref_pixelised_point[0] = floorf(current_point[0] / pixel_size[0]) * pixel_size[0];
+    ref_pixelised_point[1] = floorf(current_point[1] / pixel_size[1]) * pixel_size[1];
+    
+    for (int i = 0; i < 4; i++){
+        /* Calculate indexes (0,1;0,1) that define square around point*/
+        int aux_index[2];
+        aux_index[0] = (int)floorf(double(i / 2));
+        aux_index[1] = (int)floorf(double(i % 2));
         
-        /*Find the index in the corresponding array*/
-        total_index = x_index*(int)image_bounding_box[3] + y_index + (blockIdx.z)*image_bounding_box[3] * image_bounding_box[2];
-
-        /* Allocate this result to the output*/
-        atomicAdd(&binary_images[total_index],intersection_value);
-        /*binary_images[total_index] = intersection_value;*/
-        binary_masks[total_index] = 1;
-
-    }
-    else /* Out of boundaries */
-    {
+        /* Get coords of this voxel */
+        float contributor_pixel[2];
+        contributor_pixel[0] = ref_pixelised_point[0] + aux_index[0] * pixel_size[0];
+        contributor_pixel[1] = ref_pixelised_point[1] + aux_index[1] * pixel_size[1];
         
-    }
-    /* Repeat the process of interpolation but now in each image */
+        /* Now, add intensity value */
+        int intersection_value;
+        int x_index, y_index;
+        unsigned int total_index;
+        
+        if (contributor_pixel[0] > box[0] && contributor_pixel[0]<box[2] && contributor_pixel[1]>box[1] && contributor_pixel[1]<box[3])
+        {
+            /*Pixel exists, intensity computed by finding appropriate index, including an offset adjustment of bounding box*/
+            x_index = (int)((contributor_pixel[0] - box[0]) / pixel_size[0]);
+            y_index = (int)((contributor_pixel[1] - box[1]) / pixel_size[1]);
+
+            /* Total index in 1D array */
+            total_index = x_index*(int)image_bounding_box[3] + y_index + (blockIdx.z)*image_bounding_box[3] * image_bounding_box[2];
+            intersection_value = curvilinear_binary[index];
+            /* Allocate this result to the output*/
+            atomicAdd(&binary_images[total_index], intersection_value);
+            binary_masks[total_index] = 1;
+            
+        }
+        else
+        {/* pixel does not exist, no intensity*/
+
+        }
+        }
 }
 """)
