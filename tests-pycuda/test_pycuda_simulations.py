@@ -45,12 +45,10 @@ def test_binary_image_sim():
     THIS TEST NEEDS PYCUDA
     """
     # Set config
-    config_dir = "config/models_binary_LUS_config.json"
+    config_dir1 = "tests-pycuda/config/binary_config_1.json"
+    config_dir2 = "tests-pycuda/config/binary_config_2.json"
     mesh_dir = "data/data_LUS/"
-    # Load the segmented volume
-    liver_volume = svol.SegmentedVolume(config_dir=config_dir,
-                                        mesh_dir=mesh_dir,
-                                        voxel_size=0.5)
+
     # Define test poses
     pose1 = np.array([[-0.46,	0.29, -0.84	, -41.77],
                       [0.28, 0.94, 0.18, -47.72],
@@ -62,26 +60,50 @@ def test_binary_image_sim():
                       [0, 0, 0, 1]])
     test_poses = np.hstack((pose1, pose2))
 
-    # Load expected image (an extra channel is added, be careful to remove)
+    # Load expected images (an extra channel is added, be careful to remove)
     image1 = plt.imread('tests-pycuda/data/binary_liver_image_0.png', format='png')
     image2 = plt.imread('tests-pycuda/data/binary_liver_image_1.png', format='png')
+    image3 = plt.imread('tests-pycuda/data/binary_liver_image_2.png', format='png')
+    image4 = plt.imread('tests-pycuda/data/binary_liver_image_3.png', format='png')
 
+    # Load the segmented volume
+    liver_volume = svol.SegmentedVolume(config_dir=config_dir1,
+                                        mesh_dir=mesh_dir,
+                                        voxel_size=0.5)
     # Simulate images
-    _, _, colored_map = \
+    _, _, colored_map1 = \
         liver_volume.simulate_image(poses=test_poses,
                                     downsampling=2,
                                     image_num=2)
 
-    # Assert the two images
+    # Load the segmented volume
+    liver_volume = svol.SegmentedVolume(config_dir=config_dir2,
+                                        mesh_dir=mesh_dir,
+                                        voxel_size=0.5)
+    # Simulate images
+    _, _, colored_map2 = \
+        liver_volume.simulate_image(poses=test_poses,
+                                    downsampling=2,
+                                    image_num=2)
+
+    # Assert the four images
     # Due to numerical error in saving images,
     # accept tolerance of 10^-7
-    test_image1 = colored_map[:, :, :, 0]
+    test_image1 = colored_map1[:, :, :, 0]
     np.testing.assert_array_almost_equal(test_image1,
                                          image1[:, :, 0:3],
                                          decimal=7)
-    test_image2 = colored_map[:, :, :, 1]
+    test_image2 = colored_map1[:, :, :, 1]
     np.testing.assert_array_almost_equal(test_image2,
                                          image2[:, :, 0:3],
+                                         decimal=7)
+    test_image3 = colored_map2[:, :, :, 0]
+    np.testing.assert_array_almost_equal(test_image3,
+                                         image3[:, :, 0:3],
+                                         decimal=7)
+    test_image4 = colored_map2[:, :, :, 1]
+    np.testing.assert_array_almost_equal(test_image4,
+                                         image4[:, :, 0:3],
                                          decimal=7)
 
 
@@ -90,37 +112,49 @@ def test_intensity_image_sim():
     Test intensity image simulation
     THIS TEST NEEDS PYCUDA
     """
-    # Set config
-    config_dir = "config/models_intensity_LUS_config.json"
+    # Set two possible configs
+    config_dir1 = "tests-pycuda/config/intensity_config_1.json"
+    config_dir2 = "tests-pycuda/config/intensity_config_2.json"
     vol_dir = "data/data_LUS/CT_Dicom/000/"
-    # Load the segmented volume
-    ct_volume = ivol.IntensityVolume(config_dir=config_dir,
-                                     vol_dir=vol_dir,
-                                     file_type="dicom")
 
     # Define test poses
-    pose1 = np.array([[-0.46,	0.29, -0.84	, -41.77],
+    pose1 = np.array([[-0.46, 0.29, -0.84, -41.77],
                       [0.28, 0.94, 0.18, -47.72],
                       [0.84, -0.15, -0.52, -253.44],
                       [0, 0, 0, 1]])
-    pose2 = np.array([[-0.46,	0.29, -0.84	, -41.77],
+    pose2 = np.array([[-0.46, 0.29, -0.84, -41.77],
                       [0.28, 0.94, 0.18, -47.72],
                       [0.84, -0.15, -0.52, -273.24],
                       [0, 0, 0, 1]])
     test_poses = np.hstack((pose1, pose2))
 
-    # Load expected image (as array, as the bounds are not
+    # Load expected images (as array, as the bounds are not
     # between 0 and 255 or 0 and 1)
     image1 = np.load('tests-pycuda/data/intensity_liver_image_0.npy')
     image2 = np.load('tests-pycuda/data/intensity_liver_image_1.npy')
+    image3 = np.load('tests-pycuda/data/intensity_liver_image_2.npy')
+    image4 = np.load('tests-pycuda/data/intensity_liver_image_3.npy')
 
-    # Simulate images
+    # Test first config, load the volume
+    ct_volume = ivol.IntensityVolume(config_dir=config_dir1,
+                                     vol_dir=vol_dir,
+                                     file_type="dicom")
+    # Simulate images with first config
     _, ct_map = \
         ct_volume.simulate_image(poses=test_poses,
                                  downsampling=2,
                                  image_num=2)
+    # Repeat with second config
+    ct_volume = ivol.IntensityVolume(config_dir=config_dir2,
+                                     vol_dir=vol_dir,
+                                     file_type="dicom")
+    # Simulate images with first config
+    _, ct_map2 = \
+        ct_volume.simulate_image(poses=test_poses,
+                                 downsampling=2,
+                                 image_num=2)
 
-    # Assert the two images
+    # Assert the four resulting images
     # Due to numerical error in saving images,
     # accept tolerance of 10^-3
     test_image1 = ct_map[:, :, 0]
@@ -131,6 +165,11 @@ def test_intensity_image_sim():
     np.testing.assert_array_almost_equal(test_image2,
                                          image2,
                                          decimal=3)
-
-
-
+    test_image3 = ct_map2[:, :, 0]
+    np.testing.assert_array_almost_equal(test_image3,
+                                         image3,
+                                         decimal=3)
+    test_image4 = ct_map2[:, :, 1]
+    np.testing.assert_array_almost_equal(test_image4,
+                                         image4,
+                                         decimal=3)

@@ -16,8 +16,8 @@ from pycuda.compiler import SourceModule
 int_reslicing_kernels = SourceModule("""
 __global__ void transform(float *xyz_position, float *xy_position, const float *tracker_array, const float *offset_array, const float *curvilinear_params, const int image_number)
 {
-    int width = ceilf(curvilinear_params[2] / curvilinear_params[0]);
-    int height = ceilf(curvilinear_params[3] / curvilinear_params[1]);
+    int width = floorf(curvilinear_params[2] / curvilinear_params[0]);
+    int height = floorf(curvilinear_params[3] / curvilinear_params[1]);
 
     long int index = (blockIdx.x*blockDim.x + threadIdx.x) + (blockIdx.y*blockDim.y + threadIdx.y)*width + (blockIdx.z)*height*width + image_number*height*width*threadIdx.z;
 
@@ -158,9 +158,6 @@ __global__ void intensity_map_back(float *intensity_images, int *binary_masks, c
     box[2] = box[0] + image_bounding_box[2]*pixel_size[0];
     box[3] = box[1] + image_bounding_box[3]*pixel_size[1];
     
-    /* Define pixel area */
-    float pixel_area = pixel_size[0] * pixel_size[1];
-    
     /* Get current point in 2D space */
     float current_point[2];
     current_point[0] = plane_array[index];
@@ -181,12 +178,6 @@ __global__ void intensity_map_back(float *intensity_images, int *binary_masks, c
         float contributor_pixel[2];
         contributor_pixel[0] = ref_pixelised_point[0] + aux_index[0] * pixel_size[0];
         contributor_pixel[1] = ref_pixelised_point[1] + aux_index[1] * pixel_size[1];
-        
-        /* Calculate bilinear interpolation weight coefficient*/
-        float distance_factor, dx, dy;
-        dx = (pixel_size[0] - abs(current_point[0] - contributor_pixel[0]));
-        dy = (pixel_size[1] - abs(current_point[1] - contributor_pixel[1]));
-        distance_factor = abs(dx)*abs(dy) / pixel_area;
         
         /* Now, add intensity value */
         float intensity;
