@@ -1,0 +1,7 @@
+{
+  "simulation":{
+    "fan_geometry": [0.05, 0.1235, 70, 526, 380, 17],
+    "image_dimensions": [600, 544],
+    "pixel_size": [0.1235, 0.1235]
+  }
+}
