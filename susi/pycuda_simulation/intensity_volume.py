@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import pydicom as dicom
 import nibabel as nib
 import pycuda.driver as drv
-import susi.pycuda_simulation.cuda_intensity_reslicing as cuda_int_reslicing
+import susi.pycuda_simulation.cuda_reslicing as cres
 
 
 class IntensityVolume:
@@ -301,8 +301,7 @@ def intensity_slice_volume(intensity_volume,
     positions_3d_linear = np.zeros((1, coord_w * coord_h * image_num * 3))\
         .astype(np.float32)
     # Get kernel
-    transform_kernel = cuda_int_reslicing.int_reslicing_kernels\
-        .get_function("transform")
+    transform_kernel = cres.reslicing_kernels.get_function("transform")
     # Then run it
     transform_kernel(drv.Out(positions_3d_linear), drv.Out(positions_2d),
                      drv.In(pose_array), drv.In(offset_array),
@@ -326,8 +325,7 @@ def intensity_slice_volume(intensity_volume,
     intensity_volume_linear = intensity_volume_linear\
         .reshape([1, np.prod(intensity_volume.shape)], order="F")
     # Call kernel
-    slice_kernel = cuda_int_reslicing.\
-        int_reslicing_kernels.get_function('weighted_slice')
+    slice_kernel = cres.reslicing_kernels.get_function('weighted_slice')
     slice_kernel(drv.Out(intensity_maps), drv.In(positions_3d_linear),
                  drv.In(intensity_volume_linear), drv.In(intensity_volume_dims),
                  drv.In(voxel_size.astype(np.float32)),
@@ -347,8 +345,7 @@ def intensity_slice_volume(intensity_volume,
     intensity_images = np.zeros((1, np.prod(image_dim))).astype(np.float32)
     mask = np.zeros((1, np.prod(image_dim))).astype(np.int32)
     # Call kernel
-    map_kernel = cuda_int_reslicing.\
-        int_reslicing_kernels.get_function('intensity_map_back')
+    map_kernel = cres.reslicing_kernels.get_function('intensity_map_back')
     map_kernel(drv.Out(intensity_images), drv.Out(mask),
                drv.In(intensity_maps), drv.In(positions_2d*1000),
                drv.In(np.array([coord_w, coord_h, image_num], dtype=np.int32)),
@@ -433,7 +430,7 @@ def linear_intensity_slice_volume(intensity_volume,
     positions_3d_linear = np.zeros((1, np.prod(image_dim)*3))\
         .astype(np.float32)
     # Get kernel
-    transform_kernel = cuda_int_reslicing.int_reslicing_kernels\
+    transform_kernel = cres.reslicing_kernels\
         .get_function("linear_transform")
     # Then run it
     pixel_size = downsampling * scale_2d.astype(np.float32)
@@ -459,8 +456,7 @@ def linear_intensity_slice_volume(intensity_volume,
         .reshape([1, np.prod(intensity_volume.shape)], order="F")
 
     # Call kernel
-    slice_kernel = cuda_int_reslicing. \
-        int_reslicing_kernels.get_function('weighted_slice')
+    slice_kernel = cres.reslicing_kernels.get_function('weighted_slice')
     slice_kernel(drv.Out(intensity_maps), drv.In(positions_3d_linear),
                  drv.In(intensity_volume_linear), drv.In(intensity_volume_dims),
                  drv.In(voxel_size.astype(np.float32)),

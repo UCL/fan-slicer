@@ -17,7 +17,7 @@ from scipy.ndimage.morphology import binary_fill_holes as fill
 from scipy.ndimage.morphology import binary_erosion as erode
 from scipy.ndimage.morphology import binary_dilation as dilate
 import susi.pycuda_simulation.mesh as mesh
-import susi.pycuda_simulation.cuda_reslicing as cuda_reslicing
+import susi.pycuda_simulation.cuda_reslicing as cres
 
 
 class SegmentedVolume:
@@ -549,7 +549,7 @@ def slice_volume(binary_volume,
     positions_3d_linear = np.zeros((1, coord_w*coord_h*image_num*3))\
         .astype(np.float32)
     # Get kernel
-    transform_kernel = cuda_reslicing.reslicing_kernels\
+    transform_kernel = cres.reslicing_kernels\
         .get_function("transform")
     # Then run it
     transform_kernel(drv.Out(positions_3d_linear), drv.Out(positions_2d),
@@ -572,7 +572,7 @@ def slice_volume(binary_volume,
         reshape([1, np.prod(binary_volume.shape)], order="F")
 
     # Call kernel
-    slice_kernel = cuda_reslicing.reslicing_kernels.get_function('slice')
+    slice_kernel = cres.reslicing_kernels.get_function('slice')
     # Then run it
     slice_kernel(drv.Out(binary_maps), drv.In(positions_3d_linear),
                  drv.In(binary_volume_linear), drv.In(binary_volume_dims),
@@ -590,7 +590,7 @@ def slice_volume(binary_volume,
     binary_images = np.zeros((1, np.prod(image_dim))).astype(np.int32)
     mask = np.zeros((1, np.prod(image_dim))).astype(bool)
     # Call kernel
-    map_kernel = cuda_reslicing.reslicing_kernels.get_function('map_back')
+    map_kernel = cres.reslicing_kernels.get_function('map_back')
     # Then run it
     map_kernel(drv.Out(binary_images), drv.Out(mask),
                drv.In(binary_maps), drv.In(positions_2d*1000),
@@ -675,8 +675,7 @@ def linear_slice_volume(binary_volume,
     positions_3d_linear = np.zeros((1, np.prod(image_dim)*3))\
         .astype(np.float32)
     # Get kernel
-    transform_kernel = cuda_reslicing.reslicing_kernels\
-        .get_function("linear_transform")
+    transform_kernel = cres.reslicing_kernels.get_function("linear_transform")
     # Then run it
     pixel_size = downsampling * scale_2d.astype(np.float32)
     transform_kernel(drv.Out(positions_3d_linear), drv.In(pose_array),
@@ -698,7 +697,7 @@ def linear_slice_volume(binary_volume,
         reshape([1, np.prod(binary_volume.shape)], order="F")
 
     # Call kernel
-    slice_kernel = cuda_reslicing.reslicing_kernels.get_function('slice')
+    slice_kernel = cres.reslicing_kernels.get_function('slice')
     # Then run it
     slice_kernel(drv.Out(binary_maps), drv.In(positions_3d_linear),
                  drv.In(binary_volume_linear), drv.In(binary_volume_dims),
