@@ -189,16 +189,27 @@ class IntensityVolume:
                               ["pixel_size"])
 
         # Simulate images
-        points, images = intensity_slice_volume(
-                        intensity_volume=self.ct_volume,
-                        bound_box=self.bound_box,
-                        image_num=image_num,
-                        poses=poses,
-                        downsampling=downsampling,
-                        fan_parameters=fan_parameters,
-                        scale_2d=pixel_size,
-                        image_dim=image_dimensions,
-                        voxel_size=self.voxel_size)
+        if self.config["simulation"]["transducer"] == "curvilinear":
+            points, images = intensity_slice_volume(
+                             intensity_volume=self.ct_volume,
+                             bound_box=self.bound_box,
+                             image_num=image_num,
+                             poses=poses,
+                             downsampling=downsampling,
+                             fan_parameters=fan_parameters,
+                             scale_2d=pixel_size,
+                             image_dim=image_dimensions,
+                             voxel_size=self.voxel_size)
+        else:
+            points, images = linear_intensity_slice_volume(
+                             intensity_volume=self.ct_volume,
+                             bound_box=self.bound_box,
+                             image_num=image_num,
+                             poses=poses,
+                             downsampling=downsampling,
+                             scale_2d=pixel_size,
+                             image_dim=image_dimensions,
+                             voxel_size=self.voxel_size)
 
         return points, images
 
@@ -257,10 +268,6 @@ def intensity_slice_volume(intensity_volume,
         if len(voxel_size) != 3:
             warnings.warn('Input voxel size does not have 3 values')
             return 0
-
-    scale_matrix = np.eye(4)
-    scale_matrix[0, 0] = scale_2d[0] * downsampling
-    scale_matrix[1, 1] = scale_2d[1] * downsampling
 
     if poses.shape[1] / 4 != image_num:
         warnings.warn("Input poses do not match image number")
@@ -370,4 +377,109 @@ def intensity_slice_volume(intensity_volume,
 
     # Output a stack of images, where each z-slice has a plane,
     # and the corresponding 3D positions
+    return positions_3d, intensity_image_array
+
+
+def linear_intensity_slice_volume(intensity_volume,
+                                  bound_box,
+                                  image_num=1,
+                                  poses=np.eye(4),
+                                  downsampling=1,
+                                  scale_2d=None,
+                                  image_dim=None,
+                                  voxel_size=None):
+    """
+    Function that slices a volume with a linear
+    section defined by image_dim
+    """
+
+    if scale_2d is None:
+        scale_2d = np.array([0.1235, 0.1235])
+
+    # Assign simulated image dimensions
+    if image_dim is None:
+        image_dim = np.array([668, 544])
+    image_dim = np.append(image_dim, image_num)
+    image_dim[0:2] = image_dim[0:2] / downsampling
+
+    if voxel_size is None:
+        # A three element value must be input
+        voxel_size = np.array([0.5, 0.5, 0.5])
+    else:
+        if len(voxel_size) != 3:
+            warnings.warn('Input voxel size does not have 3 values')
+            return 0
+
+    if poses.shape[1]/4 != image_num:
+        warnings.warn("Input poses do not match image number")
+        return 0
+
+    # Get image dims
+    coord_w = int(image_dim[0])
+    coord_h = int(image_dim[1])
+    im_size = coord_w * coord_h
+
+    # Convert poses to 1D array to be input in a kernel
+    pose_array = np.zeros((1, 9 * image_num)).astype(np.float32)
+    for p_ind in range(image_num):
+        pose = poses[:, 4*p_ind:4*(p_ind+1)]
+        # Allocate the pose
+        pose_array[0, 9*p_ind:9*(p_ind+1)] = \
+            np.hstack((pose[0, 0:2], pose[0, 3],
+                       pose[1, 0:2], pose[1, 3],
+                       pose[2, 0:2], pose[2, 3]))
+
+    # 1-Run position computation kernel, first assign it
+    positions_3d_linear = np.zeros((1, np.prod(image_dim)*3))\
+        .astype(np.float32)
+    # Get kernel
+    transform_kernel = cuda_int_reslicing.int_reslicing_kernels\
+        .get_function("linear_transform")
+    # Then run it
+    pixel_size = downsampling * scale_2d.astype(np.float32)
+    transform_kernel(drv.Out(positions_3d_linear), drv.In(pose_array),
+                     drv.In(pixel_size), drv.In(image_dim),
+                     block=(1, 1, 3), grid=(coord_w, coord_h, image_num))
+
+    # Collect 1D Output, and convert to Nx3 output
+    positions_3d = positions_3d_linear.reshape([3, im_size*image_num]).T
+
+    # 2-Next step, run slicing kernel, where pixels are placed in the positions
+    intensity_maps = np.zeros((1, coord_w*coord_h*image_num))\
+        .astype(np.float32)
+    intensity_volume_dims = np.hstack((bound_box[0, :],
+                                       intensity_volume.shape[0],
+                                       intensity_volume.shape[1],
+                                       intensity_volume.shape[2]))\
+        .astype(np.float32)
+
+    # Put the 3D volume in one 1D array
+    intensity_volume_linear = intensity_volume.astype(np.float32)
+    intensity_volume_linear = intensity_volume_linear \
+        .reshape([1, np.prod(intensity_volume.shape)], order="F")
+
+    # Call kernel
+    slice_kernel = cuda_int_reslicing. \
+        int_reslicing_kernels.get_function('weighted_slice')
+    slice_kernel(drv.Out(intensity_maps), drv.In(positions_3d_linear),
+                 drv.In(intensity_volume_linear), drv.In(intensity_volume_dims),
+                 drv.In(voxel_size.astype(np.float32)),
+                 np.int32(coord_w), np.int32(coord_h), np.int32(image_num),
+                 block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
+
+    # Create a volume with generated images
+    intensity_image_array = np.zeros((coord_h,
+                                      coord_w,
+                                      image_num)).astype(np.float32)
+
+    for plane in range(image_num):
+        # Get image and reshape it
+        current_image = intensity_maps[0, im_size*plane:
+                                       im_size*(plane+1)]
+        current_image = current_image.reshape(coord_h, coord_w)
+        # Allocate to output
+        intensity_image_array[:, :, plane] = current_image
+
+    # Output a stack of images, where each z-slice has a plane,
+    # and the corresponding 3D positions, plus an outline of the fan
     return positions_3d, intensity_image_array

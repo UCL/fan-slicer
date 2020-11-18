@@ -56,7 +56,28 @@ __global__ void transform(float *xyz_position, float *xy_position, const float *
     
 }
 
+__global__ void linear_transform(float *xyz_position, const float *tracker_array, const float *pixel_size, const int *dimensions)
+{
+    int width = dimensions[0];
+    int height = dimensions[1];
+    int image_number = dimensions[2];
 
+    long int index = (blockIdx.x*blockDim.x + threadIdx.x) + (blockIdx.y*blockDim.y + threadIdx.y)*width + (blockIdx.z)*height*width + image_number*height*width*threadIdx.z;
+
+    /* Multiply indexes by the tracker matrix*/
+    int track_index = 9 * blockIdx.z + blockDim.z * threadIdx.z;
+
+    /*Multiply by tracker*/
+    int x_index = (blockIdx.x*blockDim.x + threadIdx.x);
+    int y_index = (blockIdx.y*blockDim.y + threadIdx.y);
+    float x_coord = (-width/2 + x_index) * pixel_size[0];
+    float y_coord = y_index * pixel_size[1];
+
+    float sum1 = tracker_array[track_index] * x_coord;
+    float sum2 = tracker_array[track_index + 1] * y_coord;
+    float sum3 = tracker_array[track_index + 2];
+    xyz_position[index] = sum1 + sum2 + sum3;    
+}
 
 __global__ void weighted_slice(float *intersections_array, const float *plane_array, const float *intensities_array, const float *bounding_box, const float *voxel_size, int width, int height, int depth)
 {
