@@ -281,6 +281,8 @@ def intensity_slice_volume(intensity_volume,
                             origin_to_transducer + line_depth,
                             line_resolution))
 
+    slice_dim = np.array([coord_w, coord_h, image_num]).astype(np.int32)
+
     # Convert poses to 1D array to be input in a kernel
     pose_array = np.zeros((1, 9 * image_num)).astype(np.float32)
     offset_array = np.zeros((1, 3 * image_num)).astype(np.float32)
@@ -328,8 +330,7 @@ def intensity_slice_volume(intensity_volume,
     slice_kernel = cres.reslicing_kernels.get_function('weighted_slice')
     slice_kernel(drv.Out(intensity_maps), drv.In(positions_3d_linear),
                  drv.In(intensity_volume_linear), drv.In(intensity_volume_dims),
-                 drv.In(voxel_size.astype(np.float32)),
-                 np.int32(coord_w), np.int32(coord_h), np.int32(image_num),
+                 drv.In(voxel_size.astype(np.float32)), drv.In(slice_dim),
                  block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
 
     # This line is to see the unwarped intersection for debugging purposes
@@ -348,8 +349,8 @@ def intensity_slice_volume(intensity_volume,
     map_kernel = cres.reslicing_kernels.get_function('intensity_map_back')
     map_kernel(drv.Out(intensity_images), drv.Out(mask),
                drv.In(intensity_maps), drv.In(positions_2d*1000),
-               drv.In(np.array([coord_w, coord_h, image_num], dtype=np.int32)),
-               drv.In(image_bounding_box), drv.In(pixel_size*1000),
+               drv.In(slice_dim), drv.In(image_bounding_box),
+               drv.In(pixel_size*1000),
                block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
 
     # Create a volume with generated images
@@ -398,6 +399,7 @@ def linear_intensity_slice_volume(intensity_volume,
         image_dim = np.array([668, 544])
     image_dim = np.append(image_dim, image_num)
     image_dim[0:2] = image_dim[0:2] / downsampling
+    image_dim = image_dim.astype(np.int32)
 
     if voxel_size is None:
         # A three element value must be input
@@ -459,8 +461,7 @@ def linear_intensity_slice_volume(intensity_volume,
     slice_kernel = cres.reslicing_kernels.get_function('weighted_slice')
     slice_kernel(drv.Out(intensity_maps), drv.In(positions_3d_linear),
                  drv.In(intensity_volume_linear), drv.In(intensity_volume_dims),
-                 drv.In(voxel_size.astype(np.float32)),
-                 np.int32(coord_w), np.int32(coord_h), np.int32(image_num),
+                 drv.In(voxel_size.astype(np.float32)), drv.In(image_dim),
                  block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
 
     # Create a volume with generated images

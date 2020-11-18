@@ -82,9 +82,12 @@ __global__ void linear_transform(float *xyz_position, const float *tracker_array
     xyz_position[index] = sum1 + sum2 + sum3;    
 }
 
-__global__ void slice(int *binary_array, const float *plane_array, const bool *binary_surface, const float *bounding_box, const float *voxel_size, int width, int height, int image_number)
+__global__ void slice(int *binary_array, const float *plane_array, const bool *binary_surface, const float *bounding_box, const float *voxel_size, int *dimensions)
 {   
     // This kernel calculates the intersection values between a set of 3D points and a segmented 3D volume
+    int width = dimensions[0];
+    int height = dimensions[1];
+    int image_number = dimensions[2];
     int vol_size = height * width * image_number;
     unsigned long int index = (blockIdx.x * blockDim.x + threadIdx.x) + (blockIdx.y * blockDim.y + threadIdx.y) * width + (blockIdx.z) * height * width;
     float voxelised_point[3];
@@ -220,10 +223,13 @@ __global__ void map_back(int *binary_images, bool *binary_masks, const int *curv
         }
 }
 
-__global__ void weighted_slice(float *intersections_array, const float *plane_array, const float *intensities_array, const float *bounding_box, const float *voxel_size, int width, int height, int depth)
+__global__ void weighted_slice(float *intersections_array, const float *plane_array, const float *intensities_array, const float *bounding_box, const float *voxel_size, int *dimensions)
 {
     // This kernel calculates the intersection values between a set of 3D points and a 3D intensity volume
-    int vol_size = height * width * depth;
+    int width = dimensions[0];
+    int height = dimensions[1];
+    int image_number = dimensions[2];
+    int vol_size = height * width * image_number;
     unsigned int index = (blockIdx.x * blockDim.x + threadIdx.x) * height + (blockIdx.y * blockDim.y + threadIdx.y) + (blockIdx.z) * height * width;
 
     /* Calculate the current point in 3D space*/
