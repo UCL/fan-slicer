@@ -136,7 +136,6 @@ class SegmentedVolume:
         a segmented model
         """
         # Get config parameters for the simulation
-        fan_parameters = self.config["simulation"]["fan_geometry"]
         image_dimensions = np.array(self.config["simulation"]
                                     ["image_dimensions"])
         pixel_size = np.array(self.config["simulation"]
@@ -160,28 +159,28 @@ class SegmentedVolume:
                 model_name = model_name.replace(" ", "_")
 
                 if self.config["simulation"]["transducer"] == "curvilinear":
-                    # Reslice it
+
+                    fan_parameters = self.config["simulation"]["fan_geometry"]
                     points, images, mask = slice_volume(
                                     self.binary_volumes[model_name][0],
                                     self.binary_volumes[model_name][1],
-                                    image_num=image_num,
+                                    image_dimensions,
+                                    fan_parameters,
+                                    pixel_size,
+                                    voxel_size,
                                     poses=poses,
-                                    downsampling=downsampling,
-                                    fan_parameters=fan_parameters,
-                                    scale_2d=pixel_size,
-                                    image_dim=image_dimensions,
-                                    voxel_size=voxel_size)
+                                    image_num=image_num,
+                                    downsampling=downsampling)
                 else:
                     points, images = linear_slice_volume(
                                      self.binary_volumes[model_name][0],
                                      self.binary_volumes[model_name][1],
-                                     image_num=image_num,
+                                     image_dimensions,
+                                     pixel_size,
+                                     voxel_size,
                                      poses=poses,
-                                     downsampling=downsampling,
-                                     scale_2d=pixel_size,
-                                     image_dim=image_dimensions,
-                                     voxel_size=voxel_size)
-
+                                     image_num=image_num,
+                                     downsampling=downsampling)
                 # Add images to output
                 simulation_images = simulation_images\
                     + images.astype(int)*(model+1)
@@ -465,76 +464,50 @@ def ray_triangle_intersection(origin,
 
 def slice_volume(binary_volume,
                  binary_bound_box,
-                 image_num=1,
+                 image_dim,
+                 fan_parameters,
+                 pixel_size,
+                 voxel_size,
                  poses=np.eye(4),
-                 downsampling=1,
-                 fan_parameters=None,
-                 scale_2d=None,
-                 image_dim=None,
-                 voxel_size=None):
+                 image_num=1,
+                 downsampling=1):
     """
     Function that slices a volume with a curvilinear
     section defined by fan_parameters
     """
-    # Get geometrical parameters
-    if fan_parameters is None:
-        # Default parameters for the plane geometry
-        aperture_res = np.deg2rad(0.05)
-        line_resolution = 0.1235
-        angular_aperture = np.deg2rad(36)
-        line_depth = 526 * line_resolution
-        origin_to_transducer = 380 * line_resolution
-        line_transducer_offset = 17 * line_resolution
-    else:
-        aperture_res = np.deg2rad(fan_parameters[0])
-        line_resolution = fan_parameters[1]
-        angular_aperture = np.deg2rad(fan_parameters[2])
-        line_depth = fan_parameters[3] * line_resolution
-        origin_to_transducer = fan_parameters[4] * line_resolution
-        line_transducer_offset = fan_parameters[5] * line_resolution
+    # Get geometrical parameters of fan shape as a float:
+    # 0-Angular ray resolution, 1-ray depth resolution, 2-angular aperture
+    # 3-ray depth, 4-ray offset to origin, 5-ray offset to image top
+    fan_parameters = np.array(fan_parameters)
+    fan_parameters[0] = np.deg2rad(fan_parameters[0])
+    fan_parameters[2] = np.deg2rad(fan_parameters[2])
+    fan_parameters[3:6] = fan_parameters[3:6] * fan_parameters[1]
+    fan_parameters = fan_parameters.astype(np.float32)
 
-    # Re-assemble parameters for simulation
-    fan_params = np.array([aperture_res,
-                           line_resolution,
-                           angular_aperture,
-                           line_depth,
-                           origin_to_transducer,
-                           line_transducer_offset]).astype(np.float32)
+    # Convert inputs to appropriate float and int for cuda kernels,
+    # first pixel size of output images
+    pixel_size = (downsampling * pixel_size).astype(np.float32)
+    # Dimensions, as width, height, and number of images
+    image_dim = np.append(image_dim / downsampling, image_num).astype(np.int32)
+    im_size = image_dim[0] * image_dim[1]
+    # Voxel size of volume to reslice
+    voxel_size = voxel_size.astype(np.float32)
 
-    if scale_2d is None:
-        scale_2d = np.array([0.1235, 0.1235])
+    # Calculate 2D dimensions of the planar fan point cloud using
+    # fan params
+    coord_w = len(np.arange((-fan_parameters[2] / 2).astype(np.float32),
+                            (fan_parameters[2] / 2).astype(np.float32),
+                            fan_parameters[0]))
+    coord_h = len(np.arange(fan_parameters[4],
+                            fan_parameters[4] + fan_parameters[3],
+                            fan_parameters[1]))
 
-    # Assign simulated image dimensions
-    if image_dim is None:
-        image_dim = np.array([668, 544])
-    image_dim = np.append(image_dim, image_num)
-    image_dim[0:2] = image_dim[0:2] / downsampling
-
-    if voxel_size is None:
-        # A three element value must be input
-        voxel_size = np.array([0.5, 0.5, 0.5])
-    else:
-        if len(voxel_size) != 3:
-            warnings.warn('Input voxel size does not have 3 values')
-            return 0
-
-    if poses.shape[1]/4 != image_num:
-        warnings.warn("Input poses do not match image number")
-        return 0
-
-    # Calculate 2D dimensions of the plane point cloud
-    coord_w = len(np.arange(-angular_aperture/2,
-                            angular_aperture/2,
-                            aperture_res))
-    coord_h = len(np.arange(origin_to_transducer,
-                            origin_to_transducer + line_depth,
-                            line_resolution))
-
+    # Store these dimensions as int
     slice_dim = np.array([coord_w, coord_h, image_num]).astype(np.int32)
-
 
     # Convert poses to 1D array to be input in a kernel
     pose_array = np.zeros((1, 9 * image_num)).astype(np.float32)
+    # And an array to offset fan position per image plane
     offset_array = np.zeros((1, 3 * image_num)).astype(np.float32)
     for p_ind in range(image_num):
         pose = poses[:, 4*p_ind:4*(p_ind+1)]
@@ -543,62 +516,78 @@ def slice_volume(binary_volume,
             np.hstack((pose[0, 0:2], pose[0, 3],
                        pose[1, 0:2], pose[1, 3],
                        pose[2, 0:2], pose[2, 3]))
-        # Allocate an offset
+        # Allocate the offset
         offset_array[0, 3*p_ind:3*(p_ind+1)] = pose[0:3, 1]
 
-    # 1-Run position computation kernel, first assign it
+    # 1-Run position computation kernel, first assign position output,
+    # with float, both in 2D and 3D
     positions_2d = np.zeros((1, coord_w*coord_h*image_num*3))\
         .astype(np.float32)
     positions_3d_linear = np.zeros((1, coord_w*coord_h*image_num*3))\
         .astype(np.float32)
-    # Get kernel
-    transform_kernel = cres.reslicing_kernels\
-        .get_function("transform")
+    # Get kernel from file
+    transform_kernel = cres.reslicing_kernels.get_function("transform")
     # Then run it
-    transform_kernel(drv.Out(positions_3d_linear), drv.Out(positions_2d),
-                     drv.In(pose_array), drv.In(offset_array),
-                     drv.In(fan_params), np.int32(image_num),
-                     block=(1, 1, 3), grid=(coord_w, coord_h, image_num))
+    transform_kernel(drv.Out(positions_3d_linear),
+                     drv.Out(positions_2d),
+                     drv.In(pose_array),
+                     drv.In(offset_array),
+                     drv.In(fan_parameters),
+                     np.int32(image_num),
+                     block=(1, 1, 3),
+                     grid=(coord_w, coord_h, image_num))
 
     # Collect 1D Output, and convert to Nx3 output
     positions_3d = positions_3d_linear.reshape([3, coord_w*coord_h*image_num]).T
 
     # 2-Next step, run slicing kernel, where pixels are placed in the positions
+    # First assign the output with int
     binary_maps = np.zeros((1, coord_w*coord_h*image_num))\
         .astype(np.int32)
+    # An array of floats describing the binary volume dimensions
     binary_volume_dims = np.hstack((binary_bound_box[0, :],
                                     binary_volume.shape[0],
                                     binary_volume.shape[1],
                                     binary_volume.shape[2])).astype(np.float32)
+    # Allocate the binary volume in a 1D array
     binary_volume_linear = np.swapaxes(binary_volume, 0, 1)
     binary_volume_linear = binary_volume_linear.\
         reshape([1, np.prod(binary_volume.shape)], order="F")
 
-    # Call kernel
+    # Call kernel from file
     slice_kernel = cres.reslicing_kernels.get_function('slice')
     # Then run it
-    slice_kernel(drv.Out(binary_maps), drv.In(positions_3d_linear),
-                 drv.In(binary_volume_linear), drv.In(binary_volume_dims),
-                 drv.In(voxel_size.astype(np.float32)), drv.In(slice_dim),
-                 block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
+    slice_kernel(drv.Out(binary_maps),
+                 drv.In(positions_3d_linear),
+                 drv.In(binary_volume_linear),
+                 drv.In(binary_volume_dims),
+                 drv.In(voxel_size),
+                 drv.In(slice_dim),
+                 block=(1, 1, 1),
+                 grid=(coord_w, coord_h, image_num))
 
     # 3-Map pixels to fan like image
-    pixel_size = np.array([line_resolution*downsampling,
-                          line_resolution*downsampling]).astype(np.float32)
+    # Define bounds of image output in 2d coordinates as float
     image_bounding_box = np.array([-image_dim[0] * pixel_size[0]/2 * 1000,
                                    0, image_dim[0],
                                    image_dim[1]]).astype(np.float32)
-    # Allocate output images
+    # Allocate output images, the binary image as an int, and the
+    # fan mask as a boolean
     binary_images = np.zeros((1, np.prod(image_dim))).astype(np.int32)
     mask = np.zeros((1, np.prod(image_dim))).astype(bool)
-    # Call kernel
+    # Call kernel from file
     map_kernel = cres.reslicing_kernels.get_function('map_back')
-    # Then run it
-    map_kernel(drv.Out(binary_images), drv.Out(mask),
-               drv.In(binary_maps), drv.In(positions_2d*1000),
-               drv.In(slice_dim), drv.In(image_bounding_box),
+    # Then run it, multiplying coordinates value by a 1000, in order
+    # to avoid sampling errors
+    map_kernel(drv.Out(binary_images),
+               drv.Out(mask),
+               drv.In(binary_maps),
+               drv.In(positions_2d*1000),
+               drv.In(slice_dim),
+               drv.In(image_bounding_box),
                drv.In(pixel_size*1000),
-               block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
+               block=(1, 1, 1),
+               grid=(coord_w, coord_h, image_num))
 
     # Create a volume with generated images
     binary_image_array = np.zeros((image_dim[1],
@@ -607,16 +596,17 @@ def slice_volume(binary_volume,
 
     for plane in range(image_num):
         # Get image and reshape it
-        current_image = binary_images[0, image_dim[0]*image_dim[1]*plane:
-                                      image_dim[0]*image_dim[1]*(plane+1)]
+        current_image = binary_images[0, im_size*plane:
+                                      im_size*(plane+1)]
         current_image = current_image.reshape(image_dim[0], image_dim[1]).T
+        # Morphological operations to clean image
         current_image = erode(current_image, iterations=2)
         current_image = dilate(current_image, iterations=2)
         # Allocate to output
         binary_image_array[:, :, plane] = current_image
 
     # Get the fan mask, mostly used for visualisation
-    mask = mask[0, 0:image_dim[0]*image_dim[1]]
+    mask = mask[0, 0:im_size]
     mask = mask.reshape(image_dim[0], image_dim[1]).T
 
     # Output a stack of images, where each z-slice has a plane,
@@ -626,38 +616,28 @@ def slice_volume(binary_volume,
 
 def linear_slice_volume(binary_volume,
                         binary_bound_box,
-                        image_num=1,
+                        image_dim,
+                        pixel_size,
+                        voxel_size,
                         poses=np.eye(4),
-                        downsampling=1,
-                        scale_2d=None,
-                        image_dim=None,
-                        voxel_size=None):
+                        image_num=1,
+                        downsampling=1):
     """
     Function that slices a volume with a linear
     section defined by image_dim
     """
 
-    if scale_2d is None:
-        scale_2d = np.array([0.1235, 0.1235])
+    # Convert inputs to appropriate float and int for cuda kernels,
+    # first pixel size of output images
+    pixel_size = downsampling * pixel_size.astype(np.float32)
+    # Dimensions, as width, height, and number of images
+    image_dim = np.append(image_dim / downsampling, image_num).astype(np.int32)
+    # Voxel size of volume to reslice
+    voxel_size = voxel_size.astype(np.float32)
 
-    # Assign simulated image dimensions
-    if image_dim is None:
-        image_dim = np.array([668, 544])
-    image_dim = np.append(image_dim, image_num)
-    image_dim[0:2] = image_dim[0:2] / downsampling
-    image_dim = image_dim.astype(np.int32)
-
-    if voxel_size is None:
-        # A three element value must be input
-        voxel_size = np.array([0.5, 0.5, 0.5])
-    else:
-        if len(voxel_size) != 3:
-            warnings.warn('Input voxel size does not have 3 values')
-            return 0
-
-    if poses.shape[1]/4 != image_num:
-        warnings.warn("Input poses do not match image number")
-        return 0
+    # if poses.shape[1]/4 != image_num:
+    #     warnings.warn("Input poses do not match image number")
+    #     return 0
 
     # Get image dims
     coord_w = int(image_dim[0])
@@ -674,37 +654,45 @@ def linear_slice_volume(binary_volume,
                        pose[1, 0:2], pose[1, 3],
                        pose[2, 0:2], pose[2, 3]))
 
-    # 1-Run position computation kernel, first assign it
+    # 1-Run position computation kernel, first assign position output,
+    # with float
     positions_3d_linear = np.zeros((1, np.prod(image_dim)*3))\
         .astype(np.float32)
-    # Get kernel
+    # Get kernel from file
     transform_kernel = cres.reslicing_kernels.get_function("linear_transform")
     # Then run it
-    pixel_size = downsampling * scale_2d.astype(np.float32)
-    transform_kernel(drv.Out(positions_3d_linear), drv.In(pose_array),
-                     drv.In(pixel_size), drv.In(image_dim),
-                     block=(1, 1, 3), grid=(coord_w, coord_h, image_num))
-
+    transform_kernel(drv.Out(positions_3d_linear),
+                     drv.In(pose_array),
+                     drv.In(pixel_size),
+                     drv.In(image_dim),
+                     block=(1, 1, 3),
+                     grid=(coord_w, coord_h, image_num))
     # Collect 1D Output, and convert to Nx3 output
     positions_3d = positions_3d_linear.reshape([3, im_size*image_num]).T
 
     # 2-Next step, run slicing kernel, where pixels are placed in the positions
+    # First assign the output with int
     binary_maps = np.zeros((1, coord_w*coord_h*image_num))\
         .astype(np.int32)
+    # An array of floats describing the binary volume dimensions
     binary_volume_dims = np.hstack((binary_bound_box[0, :],
                                     binary_volume.shape[0],
                                     binary_volume.shape[1],
                                     binary_volume.shape[2])).astype(np.float32)
+    # Allocate the binary volume in a 1D array
     binary_volume_linear = np.swapaxes(binary_volume, 0, 1)
     binary_volume_linear = binary_volume_linear.\
         reshape([1, np.prod(binary_volume.shape)], order="F")
 
-    # Call kernel
+    # Call kernel from file
     slice_kernel = cres.reslicing_kernels.get_function('slice')
     # Then run it
-    slice_kernel(drv.Out(binary_maps), drv.In(positions_3d_linear),
-                 drv.In(binary_volume_linear), drv.In(binary_volume_dims),
-                 drv.In(voxel_size.astype(np.float32)), drv.In(image_dim),
+    slice_kernel(drv.Out(binary_maps),
+                 drv.In(positions_3d_linear),
+                 drv.In(binary_volume_linear),
+                 drv.In(binary_volume_dims),
+                 drv.In(voxel_size),
+                 drv.In(image_dim),
                  block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
 
     # Create a volume with generated images
@@ -713,17 +701,18 @@ def linear_slice_volume(binary_volume,
                                    image_num)).astype(bool)
 
     for plane in range(image_num):
-        # Get image and reshape it
+        # Get each image and reshape it
         current_image = binary_maps[0, im_size*plane:
                                     im_size*(plane+1)]
         current_image = current_image.reshape(coord_h, coord_w)
+        # Morphological operations to clean image
         current_image = erode(current_image, iterations=2)
         current_image = dilate(current_image, iterations=2)
         # Allocate to output
         binary_image_array[:, :, plane] = current_image
 
     # Output a stack of images, where each z-slice has a plane,
-    # and the corresponding 3D positions, plus an outline of the fan
+    # and the corresponding 3D positions
     return positions_3d, binary_image_array
 
 
