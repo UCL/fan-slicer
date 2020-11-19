@@ -10,7 +10,6 @@ intensity volume
 
 import json
 import os
-import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import pydicom as dicom
@@ -43,7 +42,7 @@ class IntensityVolume:
             config_file = open(config_dir)
             self.config = json.load(config_file)
         else:
-            print("No valid config file")
+            raise ValueError("No valid config file!")
 
         # Check whether a nii or dicom is to be
         # loaded
@@ -59,8 +58,7 @@ class IntensityVolume:
         Loads volume from Dicom
         """
         if not os.path.isdir(dicom_dir):
-            warnings.warn("No valid file directory")
-            return 0
+            raise ValueError("No valid file directory for dicom!")
 
         image_list = os.listdir(dicom_dir)
         image_list.sort()
@@ -186,6 +184,14 @@ class IntensityVolume:
                                     ["image_dimensions"])
         pixel_size = np.array(self.config["simulation"]
                               ["pixel_size"])
+
+        # Check if number of images matches number of poses
+        if poses.shape[1]/4 != image_num:
+            raise ValueError("Input poses do not match image number!")
+
+        # Check if downsampling is at least 1
+        if downsampling < 1:
+            raise ValueError("Downsampling must be greater than 1")
 
         # Simulate images
         if self.config["simulation"]["transducer"] == "curvilinear":

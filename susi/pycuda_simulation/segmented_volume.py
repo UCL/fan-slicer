@@ -34,7 +34,11 @@ class SegmentedVolume:
         Mesh3D objects and binary volume to be sliced
         """
         self.binary_volumes = dict()
-        self.voxel_size = voxel_size
+        if voxel_size > 0:
+            self.voxel_size = voxel_size
+        else:
+            raise ValueError("Voxel size must be positive!")
+
         # Load meshes if a directory is given
         self.config = None
         self.meshes = dict()
@@ -42,7 +46,7 @@ class SegmentedVolume:
             config_file = open(config_dir)
             self.config = json.load(config_file)
         else:
-            print("No valid config file")
+            raise ValueError("No valid config file!")
 
         # First, load meshes to constructor
         self.load_vtk_from_dir(mesh_dir)
@@ -57,12 +61,10 @@ class SegmentedVolume:
         to config requirements
         """
         if self.config is None:
-            warnings.warn("SegmentedVolume object has no config")
-            return 0
+            raise ValueError("SegmentedVolume object has no config")
 
         if not os.path.isdir(mesh_dir):
-            warnings.warn("No valid mesh directory")
-            return 0
+            raise ValueError("No valid mesh directory")
 
         # Get relevant files from the config
         meshes_to_load = self.config["models"]["files"]
@@ -74,7 +76,7 @@ class SegmentedVolume:
                 mesh_dict[file.replace(" ", "_")] =\
                     mesh.load_mesh_from_vtk(mesh_file)
             else:
-                warnings.warn(file + '.vtk not found')
+                raise ValueError(file + '.vtk not found')
 
         self.meshes = mesh_dict
         return 0
@@ -87,8 +89,7 @@ class SegmentedVolume:
         is generated for every relevant mesh defined in config
         """
         if not os.path.isdir(data_dir):
-            warnings.warn("No valid data directory")
-            return 0
+            raise ValueError("No valid data directory")
 
         # Prepare dictionary that contains models
         volume_dict = dict()
@@ -110,6 +111,7 @@ class SegmentedVolume:
                 if os.path.isfile(data_dir + binary_name):
                     # Load a pre-saved model
                     volume = np.load(data_dir + binary_name)
+                    print('Loaded ' + binary_name)
                 else:
                     # Generate a model
                     volume = voxelise_mesh(self.meshes[model_name],
@@ -143,6 +145,14 @@ class SegmentedVolume:
         voxel_size = np.array([self.voxel_size,
                                self.voxel_size,
                                self.voxel_size])
+
+        # Check if number of images matches number of poses
+        if poses.shape[1] / 4 != image_num:
+            raise ValueError("Input poses do not match image number!")
+
+        # Check if downsampling is at least 1
+        if downsampling < 1:
+            raise ValueError("Downsampling must be greater than 1")
 
         # Prepare outputs
         dim = (image_dimensions/downsampling).astype(int)
@@ -634,10 +644,6 @@ def linear_slice_volume(binary_volume,
     image_dim = np.append(image_dim / downsampling, image_num).astype(np.int32)
     # Voxel size of volume to reslice
     voxel_size = voxel_size.astype(np.float32)
-
-    # if poses.shape[1]/4 != image_num:
-    #     warnings.warn("Input poses do not match image number")
-    #     return 0
 
     # Get image dims
     coord_w = int(image_dim[0])
