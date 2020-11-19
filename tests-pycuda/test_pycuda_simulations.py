@@ -173,3 +173,75 @@ def test_intensity_image_sim():
     np.testing.assert_array_almost_equal(test_image4,
                                          image4,
                                          decimal=3)
+
+
+def test_linear_probe_sim():
+    """
+    Test linear image simulation, with both intensity and
+    segmented models
+    """
+    # Set two possible configs
+    config_dir = "tests-pycuda/config/linear_config.json"
+    vol_dir = "data/data_LUS/CT_Dicom/000/"
+    mesh_dir = "data/data_LUS/"
+
+    # Define test poses
+    pose1 = np.array([[-0.46, 0.29, -0.84, -41.77],
+                      [0.28, 0.94, 0.18, -47.72],
+                      [0.84, -0.15, -0.52, -253.44],
+                      [0, 0, 0, 1]])
+    pose2 = np.array([[-0.46, 0.29, -0.84, -41.77],
+                      [0.28, 0.94, 0.18, -47.72],
+                      [0.84, -0.15, -0.52, -273.24],
+                      [0, 0, 0, 1]])
+    test_poses = np.hstack((pose1, pose2))
+
+    # Load expected images (as array, as the bounds are not
+    # between 0 and 255 or 0 and 1)
+    image1 = np.load('tests-pycuda/data/intensity_linear_liver_image_0.npy')
+    image2 = np.load('tests-pycuda/data/intensity_linear_liver_image_1.npy')
+    bin_image1 = plt.imread('tests-pycuda/data/'
+                            'binary_linear_liver_image_0.png', format='png')
+    bin_image2 = plt.imread('tests-pycuda/data/'
+                            'binary_linear_liver_image_1.png', format='png')
+
+    # Test intensity images
+    ct_volume = ivol.IntensityVolume(config_dir=config_dir,
+                                     vol_dir=vol_dir,
+                                     file_type="dicom")
+    # Simulate images with first config
+    _, ct_map = \
+        ct_volume.simulate_image(poses=test_poses,
+                                 downsampling=2,
+                                 image_num=2)
+
+    # Test binary/segmented images
+    liver_volume = svol.SegmentedVolume(config_dir=config_dir,
+                                        mesh_dir=mesh_dir,
+                                        voxel_size=0.5)
+    # Simulate images
+    _, _, colored_map = \
+        liver_volume.simulate_image(poses=test_poses,
+                                    downsampling=2,
+                                    image_num=2)
+
+    # Assert the four resulting images
+    # Due to numerical error in saving images,
+    # accept tolerance of 10^-3
+    test_image1 = ct_map[:, :, 0]
+    np.testing.assert_array_almost_equal(test_image1,
+                                         image1,
+                                         decimal=3)
+    test_image2 = ct_map[:, :, 1]
+    np.testing.assert_array_almost_equal(test_image2,
+                                         image2,
+                                         decimal=3)
+    test_image3 = colored_map[:, :, :, 0]
+    np.testing.assert_array_almost_equal(test_image3,
+                                         bin_image1,
+                                         decimal=7)
+    test_image4 = colored_map[:, :, :, 1]
+    np.testing.assert_array_almost_equal(test_image4,
+                                         bin_image2,
+                                         decimal=7)
+

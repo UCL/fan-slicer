@@ -1,0 +1,13 @@
+{
+  "models":{
+    "files": ["liver", "hepatic veins", "portal vein", "arteries"]
+  },
+  "simulation":{
+    "transducer": "linear",
+    "simulation_models": [0, 1, 1, 1],
+    "image_dimensions": [400, 500],
+    "pixel_size": [0.1235, 0.1235],
+    "colors": [[150, 0, 0], [0, 200, 0], [0, 120, 180], [200, 0, 0]],
+    "opacity": [0.1, 1.0, 1.0, 1.0]
+  }
+}
