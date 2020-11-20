@@ -26,12 +26,18 @@ class SegmentedVolume:
     meshes and 3D binary volumes
     """
     def __init__(self,
-                 mesh_dir=None,
-                 config_dir=None,
+                 mesh_dir,
+                 config_dir,
                  voxel_size=1.0):
         """
-        Create segmented volume class that holds
-        Mesh3D objects and binary volume to be sliced
+        Create segmented volume object
+
+        :param mesh_dir: directory with vtk models used in slicing
+        :param config_dir: json file with reslicing parameters and
+        model names to be used
+        :param voxel_size: isotropic voxel size considered to
+        generate the binary volumes for each vtk model
+
         """
         self.binary_volumes = dict()
         if voxel_size > 0:
@@ -58,7 +64,9 @@ class SegmentedVolume:
                           mesh_dir):
         """
         Loads vtk files into mesh3D objects, according
-        to config requirements
+        to self.config
+
+        :param mesh_dir: directory with vtk files
         """
         if self.config is None:
             raise ValueError("SegmentedVolume object has no config")
@@ -87,6 +95,9 @@ class SegmentedVolume:
         Load or generate binary models from relevant meshes
         If binary volumes do not exist in data dir, a binary volume
         is generated for every relevant mesh defined in config
+
+        :param data_dir: directory from where binary volumes
+        is loaded/saved
         """
         if not os.path.isdir(data_dir):
             raise ValueError("No valid data directory")
@@ -132,10 +143,16 @@ class SegmentedVolume:
                        image_num=1,
                        downsampling=1):
         """
-        Function that generates a binary image from a set of poses,
-        using the config loaded to the class. Outputs a colored image
-        array for visualisation, and an image where each int represents
-        a segmented model
+        Function that generates a set of images from multiple
+        segmented models stored in self.config. Uses the function
+        slice_volume or linear_slice_volume
+
+        :param poses: array with probe poses
+        :param image_num: number of images to simulate
+        :param downsampling: downsampling value on image dimensions
+        :return: positions in 3D, stack of resulting images with
+        multiple labels, and stack with colored images for
+        visualisation
         """
         # Get config parameters for the simulation
         image_dimensions = np.array(self.config["simulation"]
@@ -223,6 +240,10 @@ class SegmentedVolume:
         Show intersection and plane geometry in 3D model
         No suitable way of showing meshes, so this method
         needs improvements
+
+        :param image_array: stack of images to show
+        :param image_indexes: stack index of image to be shown
+        :param point_array: point cloud with stack of plane points
         """
         # Get number of points per plane
         points_per_plane = int(point_array.shape[0]/image_array.shape[3])
@@ -272,6 +293,13 @@ def voxelise_mesh(input_mesh,
                   file_name=None):
     """
     Method that generates binary volume from an input mesh
+    :param input_mesh: triangular mesh to be voxelised
+    :param voxel_size: 3D voxel size
+    :param margin: 3D vector with additional voxel margin
+    around the bounding box of the input mesh
+    :param save_dir: directory to save file
+    :param file_name: name of file to save
+    :return: 3D binary volume
     """
     if margin is None:
         margin = np.array([0, 0, 0])
@@ -436,6 +464,11 @@ def ray_triangle_intersection(origin,
     Checks if ray defined by origin o and
     direction d intersects triangle with coordinates
     3 x 3 in xyz
+
+    :param origin: origin of ray
+    :param direction: direction of ray
+    :param xyz: coordinates of triangle in 3 x 3 matrix
+    :return: boolean with intersection
     """
     epsilon = 0.00001
     p_0 = xyz[0, :]
@@ -482,8 +515,20 @@ def slice_volume(binary_volume,
                  image_num=1,
                  downsampling=1):
     """
-    Function that slices a volume with a curvilinear
-    section defined by fan_parameters
+    Function that slices a binary volume with fan shaped sections
+    section defined by poses of a curvilinear array
+
+    :param binary_volume: binary volume to be intersected
+    :param binary_bound_box: bounding box of volume
+    :param image_dim: Number of pixels as [width height]
+    :param fan_parameters: fan shape parameters
+    :param pixel_size: pixel dimensions
+    :param voxel_size: 3D voxel size of binary volume
+    :param poses: array with probe poses
+    :param image_num: number of images to generate
+    :param downsampling: image dimensions downsampling value
+    :return: positions in 3D, stack of resulting images, image
+    with fan shape outline
     """
     # Get geometrical parameters of fan shape as a float:
     # 0-Angular ray resolution, 1-ray depth resolution, 2-angular aperture
@@ -633,8 +678,18 @@ def linear_slice_volume(binary_volume,
                         image_num=1,
                         downsampling=1):
     """
-    Function that slices a volume with a linear
-    section defined by image_dim
+    Function that slices a binary volume with rectangular sections
+    defined by poses of a linear array
+
+    :param binary_volume: binary volume to be intersected
+    :param binary_bound_box: bounding box of volume
+    :param image_dim: Number of pixels as [width height]
+    :param pixel_size: pixel dimensions
+    :param voxel_size: 3D voxel size of binary volume (3 values)
+    :param poses: array with probe poses
+    :param image_num: number of images to generate
+    :param downsampling: image dimensions downsampling value
+    :return: positions in 3D, stack of resulting images
     """
 
     # Convert inputs to appropriate float and int for cuda kernels,
@@ -725,6 +780,8 @@ def linear_slice_volume(binary_volume,
 def show_volume(bin_volume):
     """
     Function that scrolls through volume in Z direction
+
+    :param bin_volume: binary volume to show
     """
     if len(bin_volume.shape) != 3:
         warnings.warn("Not a valid volume")

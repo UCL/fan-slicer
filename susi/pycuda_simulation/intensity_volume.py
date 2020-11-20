@@ -20,15 +20,20 @@ import susi.pycuda_simulation.cuda_reslicing as cres
 
 class IntensityVolume:
     """
-    Class that contains a 3D intensity volume image
+    Class that holds a 3D intensity volume image
     and tools for reslicing it
     """
     def __init__(self,
-                 config_dir='',
-                 vol_dir='',
+                 config_dir,
+                 vol_dir,
                  file_type='dicom'):
         """
-        Construct the volume class
+        Create intensity volume object
+
+        :param config_dir: json file with reslicing parameters
+        :param vol_dir: file with 3D volume
+        :param file_type: type of 3D volume to be loaded,
+        currently nii or dicom
         """
         self.planar_resolution = None
         self.ct_volume = None
@@ -56,6 +61,8 @@ class IntensityVolume:
     def load_volume_from_dicom(self, dicom_dir):
         """
         Loads volume from Dicom
+
+        :param dicom_dir: dicom file
         """
         if not os.path.isdir(dicom_dir):
             raise ValueError("No valid file directory for dicom!")
@@ -120,6 +127,8 @@ class IntensityVolume:
     def load_volume_from_nii(self, nii_dir):
         """
         Loads volume from nii
+
+        :param nii_dir: nii file
         """
         nii_file = nib.load(nii_dir)
         volume = nii_file.get_fdata()
@@ -129,6 +138,7 @@ class IntensityVolume:
         self.xdim = volume.shape[0]
         self.ydim = volume.shape[1]
         self.zdim = volume.shape[2]
+
         # Get resolution parameters
         affine = nii_file.affine
         self.planar_resolution = abs(np.array([affine[0, 0],
@@ -165,7 +175,7 @@ class IntensityVolume:
 
     def scroll_volume(self):
         """
-        Show volume
+        Shows volume stored in intensity volume object
         """
         for z_ind in range(self.zdim):
             plt.cla()
@@ -177,8 +187,16 @@ class IntensityVolume:
                        image_num=1,
                        downsampling=1):
         """
-        Function that generates a 2D CT projection from a set of poses
+        Function that generates a set of 2D CT images from multiple
+        segmented models stored in self.config. Uses the function
+        intensity_slice_volume or linear_intensity_slice_volume
+
+        :param poses: array with probe poses
+        :param image_num: number of images to simulate
+        :param downsampling: downsampling value on image dimensions
+        :return: positions in 3D, stack of resulting images
         """
+
         # Get config parameters for the simulation
         image_dimensions = np.array(self.config["simulation"]
                                     ["image_dimensions"])
@@ -231,7 +249,19 @@ def intensity_slice_volume(intensity_volume,
                            image_num=1,
                            downsampling=1):
     """
-    Function that slices the volume with parameters in config
+    Function that slices an intensity volume with fan shaped sections
+    section defined by poses of a curvilinear array
+
+    :param intensity_volume: binary volume to be intersected
+    :param bound_box: bounding box of volume
+    :param image_dim: Number of pixels as [width height]
+    :param fan_parameters: fan shape parameters
+    :param pixel_size: pixel dimensions
+    :param voxel_size: 3D voxel size of binary volume
+    :param poses: array with probe poses
+    :param image_num: number of images to generate
+    :param downsampling: image dimensions downsampling value
+    :return: positions in 3D, stack of resulting images
     """
     # Get geometrical parameters of fan shape as a float:
     # 0-Angular ray resolution, 1-ray depth resolution, 2-angular aperture
@@ -389,8 +419,18 @@ def linear_intensity_slice_volume(intensity_volume,
                                   image_num=1,
                                   downsampling=1):
     """
-    Function that slices a volume with a linear
-    section defined by image_dim
+    Function that slices an intensity volume with rectangular sections
+    defined by poses of a linear array
+
+    :param intensity_volume: volume to be intersected
+    :param bound_box: bounding box of volume
+    :param image_dim: Number of pixels as [width height]
+    :param pixel_size: pixel dimensions
+    :param voxel_size: 3D voxel size of binary volume (3 values)
+    :param poses: array with probe poses
+    :param image_num: number of images to generate
+    :param downsampling: image dimensions downsampling value
+    :return: positions in 3D, stack of resulting images
     """
 
     # Convert inputs to appropriate float and int for cuda kernels,
