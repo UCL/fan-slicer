@@ -3,10 +3,9 @@
     "files": ["liver", "hepatic veins", "portal vein", "arteries"]
   },
   "simulation":{
-    "transducer": "curvilinear",
+    "transducer": "linear",
     "simulation_models": [0, 1, 1, 1],
-    "fan_geometry": [0.05, 0.1235, 36, 526, 380, 17],
-    "image_dimensions": [668, 544],
+    "image_dimensions": [400, 500],
     "pixel_size": [0.1235, 0.1235],
     "colors": [[150, 0, 0], [0, 200, 0], [0, 120, 180], [200, 0, 0]],
     "opacity": [0.1, 1.0, 1.0, 1.0]

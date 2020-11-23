@@ -12,7 +12,7 @@ class Mesh3D:
     """
     Class to process mesh
     """
-    def __init__(self, v=None, t=None):
+    def __init__(self, v, t):
         """
         Constructs mesh with vertices v
         and faces t
@@ -23,6 +23,7 @@ class Mesh3D:
     def get_bounding_box(self):
         """
         Gets bounding box of Mesh3D object
+        :return: bounding box of mesh3D object
         """
         bound_box = None
         if self.vertices is not None and self.faces is not None:
@@ -43,6 +44,10 @@ def join_mesh(mesh1, mesh2):
     """
     Merges two input Mesh3D objects
     mesh1 and mesh2
+
+    :param mesh1: first mesh3D
+    :param mesh2: second mesh3D
+    :return: joint mesh3D object
     """
     # Join vertices
     joint_vertices = np.vstack((mesh1.vertices,
@@ -60,6 +65,9 @@ def load_mesh_from_vtk(vtk_dir):
     """
     Creates Mesh3D object from an input
     vtk polydata file
+
+    :param vtk_dir: vtk file
+    :return: Mesh3D object
     """
     # Set VTK reader
     reader = vtk.vtkPolyDataReader()
