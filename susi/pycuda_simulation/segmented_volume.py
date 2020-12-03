@@ -187,8 +187,6 @@ class SegmentedVolume:
 
         # Now, choose between curvilinear and linear array
         transducer_type = self.config["simulation"]["transducer"]
-        # A boolean to verify whether transducer is valid or not
-        valid_transducer = True
         if transducer_type == "curvilinear":
             # For the curvilinear case, get
             # geometrical parameters of fan shape as a float:
@@ -357,12 +355,10 @@ class SegmentedVolume:
         transducer_type = self.config["simulation"]["transducer"]
         if transducer_type == "curvilinear":
             image_dim = self.image_variables[2]
-            pixel_size = self.image_variables[3]
             aux_index = 4
         else:
             # Linear case
             image_dim = self.image_variables[0]
-            pixel_size = self.image_variables[1]
             aux_index = 2
 
         voxel_size = np.array([self.voxel_size,
@@ -385,6 +381,15 @@ class SegmentedVolume:
                                 voxel_size,
                                 poses,
                                 out_points)
+            else:
+                points, images = linear_slice_volume(
+                                 self.image_variables,
+                                 self.g_variables,
+                                 self.blockdim,
+                                 model,
+                                 voxel_size,
+                                 poses,
+                                 out_points)
 
             # Add images to output
             simulation_images = simulation_images\
@@ -841,41 +846,48 @@ def slice_volume(image_variables,
     return positions_3d, binary_image_array, mask
 
 
-def linear_slice_volume(binary_volume,
-                        binary_bound_box,
-                        image_dim,
-                        pixel_size,
+def linear_slice_volume(image_variables,
+                        g_variables,
+                        blockdim,
+                        model_index,
                         voxel_size,
-                        poses=np.eye(4),
-                        image_num=1,
-                        downsampling=1):
+                        poses,
+                        out_points=False):
     """
     Function that slices a binary volume with rectangular sections
     defined by poses of a linear array
 
-    :param binary_volume: binary volume to be intersected
-    :param binary_bound_box: bounding box of volume
-    :param image_dim: Number of pixels as [width height]
-    :param pixel_size: pixel dimensions
-    :param voxel_size: 3D voxel size of binary volume (3 values)
-    :param poses: array with probe poses
-    :param image_num: number of images to generate
-    :param downsampling: image dimensions downsampling value
+    :param image_variables: image dimensioning variable list
+    :param g_variables: All preallocated GPU variables
+    as described in the preallocation function. A list with
+    the following indexes:
+    0 - rectangle positions in 3D
+    1 - rectangular intensity images
+    2 - the target intensity volume
+    :param blockdim: block dimensions for CUDA kernels
+    :param model_index: index of model in g_variables to be sliced
+    :param voxel_size: voxel_size of the volume
+    :param poses: input set of poses
+    :param out_points: bool to get rectangular positions or not
     :return: positions in 3D, stack of resulting images
     """
 
-    # Convert inputs to appropriate float and int for cuda kernels,
-    # first pixel size of output images
-    pixel_size = downsampling * pixel_size.astype(np.float32)
-    # Dimensions, as width, height, and number of images
-    image_dim = np.append(image_dim / downsampling, image_num).astype(np.int32)
-    # Voxel size of volume to reslice
+    # Get image variables from input
+    image_dim = image_variables[0]
+    pixel_size = image_variables[1]
+
+    # Define voxel size for intersection of binary volume
     voxel_size = voxel_size.astype(np.float32)
 
-    # Get image dims
-    coord_w = int(image_dim[0])
-    coord_h = int(image_dim[1])
-    im_size = coord_w * coord_h
+    # Get size of one image, useful to get array of images
+    im_size = image_dim[0] * image_dim[1]
+
+    # Get block and grid dimensions as int
+    blockdim_x = int(blockdim[0])
+    blockdim_y = int(blockdim[1])
+    griddim_x = int(image_dim[0] / blockdim_x)
+    griddim_y = int(image_dim[1] / blockdim_y)
+    image_num = int(image_dim[2])
 
     # Convert poses to 1D array to be input in a kernel
     pose_array = np.zeros((1, 9 * image_num)).astype(np.float32)
@@ -887,57 +899,61 @@ def linear_slice_volume(binary_volume,
                        pose[1, 0:2], pose[1, 3],
                        pose[2, 0:2], pose[2, 3]))
 
-    # 1-Run position computation kernel, first assign position output,
-    # with float
-    positions_3d_linear = np.zeros((1, np.prod(image_dim)*3))\
-        .astype(np.float32)
-    # Get kernel from file
+    # 1-Run position computation kernel, acts on index 0
+    # the gpu variables, get kernel
     transform_kernel = cres.reslicing_kernels.get_function("linear_transform")
     # Then run it
-    transform_kernel(drv.Out(positions_3d_linear),
+    transform_kernel(g_variables[0],
                      drv.In(pose_array),
                      drv.In(pixel_size),
                      drv.In(image_dim),
-                     block=(1, 1, 3),
-                     grid=(coord_w, coord_h, image_num))
-    # Collect 1D Output, and convert to Nx3 output
-    positions_3d = positions_3d_linear.reshape([3, im_size*image_num]).T
+                     block=(blockdim_x, blockdim_y, 3),
+                     grid=(griddim_x, griddim_y, image_num))
 
-    # 2-Next step, run slicing kernel, where pixels are placed in the positions
-    # First assign the output with int
-    binary_maps = np.zeros((1, coord_w*coord_h*image_num))\
-        .astype(np.int32)
-    # An array of floats describing the binary volume dimensions
-    binary_volume_dims = np.hstack((binary_bound_box[0, :],
-                                    binary_volume.shape[0],
-                                    binary_volume.shape[1],
-                                    binary_volume.shape[2])).astype(np.float32)
-    # Allocate the binary volume in a 1D array
-    binary_volume_linear = np.swapaxes(binary_volume, 0, 1)
-    binary_volume_linear = binary_volume_linear.\
-        reshape([1, np.prod(binary_volume.shape)], order="F")
+    # Collect the output to a CPU array
+    positions_3d = np.empty((1, np.prod(image_dim) * 3), dtype=np.float32)
+    # In case points are to be used or visualised (with out_points as True)
+    if out_points is True:
+        g_variables[0].get(positions_3d)
+        positions_3d = positions_3d.reshape([3, np.prod(image_dim)]).T
+
+    # 2-Next step, run slicing kernel, where intensity values are
+    # placed in the positions. Define volume dimensions
+    bound_box = image_variables[2 + model_index][0]
+    vol_dim = image_variables[2 + model_index][1]
+    binary_volume_dims = np.hstack((bound_box[0, :],
+                                    vol_dim[0],
+                                    vol_dim[1],
+                                    vol_dim[2])).astype(np.float32)
+
+    # Allocate space for output images, in CPU
+    binary_images = np.empty((1, np.prod(image_dim)), dtype=np.int32)
 
     # Call kernel from file
     slice_kernel = cres.reslicing_kernels.get_function('slice')
     # Then run it
-    slice_kernel(drv.Out(binary_maps),
-                 drv.In(positions_3d_linear),
-                 drv.In(binary_volume_linear),
+    slice_kernel(g_variables[1],
+                 g_variables[0],
+                 g_variables[2 + model_index],
                  drv.In(binary_volume_dims),
                  drv.In(voxel_size),
                  drv.In(image_dim),
-                 block=(1, 1, 1), grid=(coord_w, coord_h, image_num))
+                 block=(blockdim_x, blockdim_y, 1),
+                 grid=(griddim_x, griddim_y, image_num))
 
     # Create a volume with generated images
-    binary_image_array = np.zeros((coord_h,
-                                   coord_w,
-                                   image_num)).astype(bool)
+    binary_image_array = np.zeros((image_dim[1],
+                                   image_dim[0],
+                                   image_dim[2])).astype(bool)
+
+    # Gather the results
+    g_variables[1].get(binary_images)
 
     for plane in range(image_num):
         # Get each image and reshape it
-        current_image = binary_maps[0, im_size*plane:
+        current_image = binary_images[0, im_size*plane:
                                     im_size*(plane+1)]
-        current_image = current_image.reshape(coord_h, coord_w)
+        current_image = current_image.reshape(image_dim[1], image_dim[0])
         # Morphological operations to clean image
         current_image = erode(current_image, iterations=2)
         current_image = dilate(current_image, iterations=2)
@@ -957,11 +973,11 @@ def show_volume(bin_volume):
     """
     if len(bin_volume.shape) != 3:
         raise ValueError("Not a valid volume")
-    else:
-        # Display z slices of volume
-        for z_ind in range(bin_volume.shape[2]):
-            plt.cla()
-            z_slice = bin_volume[:, :, z_ind].astype(int)
-            plt.title('Slice number ' + str(z_ind))
-            plt.imshow(z_slice, cmap='gray')
-            plt.pause(.001)
+
+    # Display z slices of volume
+    for z_ind in range(bin_volume.shape[2]):
+        plt.cla()
+        z_slice = bin_volume[:, :, z_ind].astype(int)
+        plt.title('Slice number ' + str(z_ind))
+        plt.imshow(z_slice, cmap='gray')
+        plt.pause(.001)
