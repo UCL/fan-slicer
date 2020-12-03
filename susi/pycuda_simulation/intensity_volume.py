@@ -541,7 +541,9 @@ def intensity_slice_volume(image_variables,
 
     # Gather the results
     g_variables[4].get(intensity_images)
+    g_variables[4].fill(0)
     g_variables[5].get(masks)
+    g_variables[5].fill(0)
 
     for plane in range(image_num):
         # Get image and reshape it
