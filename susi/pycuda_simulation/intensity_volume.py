@@ -71,12 +71,12 @@ class IntensityVolume:
         self.image_variables = []
         # Kernel dimensioning
         self.blockdim = np.array([1, 1])
-        # Now run allocation
+        # Initialise image num and downsample
+        self.image_num = None
+        self.downsampling = None
+        # Now run allocation to set these vars
         self.preallocate_gpu_var(image_num=image_num,
                                  downsampling=downsampling)
-        # Define image num and downsampling values
-        self.image_num = image_num
-        self.downsampling = downsampling
 
     def load_volume_from_dicom(self, dicom_dir):
         """
@@ -204,7 +204,7 @@ class IntensityVolume:
 
     def preallocate_gpu_var(self,
                             image_num,
-                            downsampling=1):
+                            downsampling):
         """
         Function to generate local gpu variables that will
         be used for simulation. Variable sizes depend on the
@@ -231,6 +231,7 @@ class IntensityVolume:
             raise ValueError('image_num must be positive integer')
 
         self.image_num = image_num
+        self.downsampling = downsampling
 
         # Now, choose between curvilinear and linear array
         transducer_type = self.config["simulation"]["transducer"]
@@ -305,7 +306,7 @@ class IntensityVolume:
                 append(gpua.GPUArray((1, np.prod(image_dim)),
                                      dtype=np.int32))
 
-            # Finally, determine optimal blocksize for kernels
+            # Determine optimal blocksize for kernels
             blockdim_x, blockdim_y = cres.get_block_size(coord_w, coord_h)
             self.blockdim = np.array([blockdim_x, blockdim_y])
 
@@ -336,13 +337,13 @@ class IntensityVolume:
                 append(gpua.GPUArray((1, np.prod(image_dim)),
                                      dtype=np.float32))
 
-            # Finally, the volume to be intersected (becomes
+            # The volume to be intersected (becomes
             # index 2)
             volume = self.ct_volume.copy()
             volume = volume.reshape([1, np.prod(volume.shape)], order="F")
             self.g_variables.append(gpua.to_gpu(volume.astype(np.float32)))
 
-            # Finally, determine optimal blocksize for kernels
+            # Determine optimal blocksize for kernels
             blockdim_x, blockdim_y = cres.get_block_size(image_dim[0],
                                                          image_dim[1])
             self.blockdim = np.array([blockdim_x, blockdim_y])
@@ -378,8 +379,7 @@ class IntensityVolume:
             self.preallocate_gpu_var(image_num=image_num,
                                      downsampling=self.downsampling)
             print("Number of images was changed from " +
-                  str(current_image_num) + " to "
-                  + str(image_num))
+                  str(current_image_num) + " to " + str(image_num))
 
         # Simulate images
         volume_dim = self.ct_volume.shape
