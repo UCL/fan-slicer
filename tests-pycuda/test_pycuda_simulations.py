@@ -138,20 +138,20 @@ def test_intensity_image_sim():
     # Test first config, load the volume
     ct_volume = ivol.IntensityVolume(config_dir=config_dir1,
                                      vol_dir=vol_dir,
-                                     file_type="dicom")
+                                     file_type="dicom",
+                                     downsampling=2)
     # Simulate images with first config
     _, ct_map = \
         ct_volume.simulate_image(poses=test_poses,
-                                 downsampling=2,
                                  image_num=2)
     # Repeat with second config
     ct_volume = ivol.IntensityVolume(config_dir=config_dir2,
                                      vol_dir=vol_dir,
-                                     file_type="dicom")
+                                     file_type="dicom",
+                                     downsampling=2)
     # Simulate images with first config
     _, ct_map2 = \
         ct_volume.simulate_image(poses=test_poses,
-                                 downsampling=2,
                                  image_num=2)
 
     # Assert the four resulting images
@@ -208,11 +208,11 @@ def test_linear_probe_sim():
     # Test intensity images
     ct_volume = ivol.IntensityVolume(config_dir=config_dir,
                                      vol_dir=vol_dir,
-                                     file_type="dicom")
+                                     file_type="dicom",
+                                     downsampling=2)
     # Simulate images with first config
     _, ct_map = \
         ct_volume.simulate_image(poses=test_poses,
-                                 downsampling=2,
                                  image_num=2)
 
     # Test binary/segmented images
