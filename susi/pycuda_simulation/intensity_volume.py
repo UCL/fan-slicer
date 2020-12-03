@@ -37,6 +37,8 @@ class IntensityVolume:
         :param vol_dir: file with 3D volume
         :param file_type: type of 3D volume to be loaded,
         currently nii or dicom
+        :param image_num: number of images to consider for preallocation
+        :param downsampling: downsampling factor on image dimensions
         """
         self.planar_resolution = None
         self.ct_volume = None
