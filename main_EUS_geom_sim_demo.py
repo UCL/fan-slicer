@@ -13,7 +13,9 @@ import susi.pycuda_simulation.intensity_volume as ivol
 
 ct_volume = ivol.IntensityVolume(vol_dir="data/data_EUS/Case0001_img.nii",
                                  config_dir="config/models_intensity_EUS_config.json",
-                                 file_type='nii')
+                                 file_type='nii',
+                                 downsampling=1,
+                                 image_num=2)
 
 # Define the two ground truth poses shown in Bonmati et al.
 # IPCAI 2018
@@ -31,7 +33,7 @@ pose2 = np.array([[0.1, 0.97, 0.19, vertex2[0]],
 poses = np.hstack((pose1, pose2))
 
 # Slice volume with the two poses (attention to image_num which must be 2)
-points, image = ct_volume.simulate_image(poses=poses, downsampling=1, image_num=2)
+points, image = ct_volume.simulate_image(poses=poses, image_num=2)
 
 # Display the images
 fig = plt.figure()
