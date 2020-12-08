@@ -210,7 +210,7 @@ class SegmentedVolume:
                                     fan_parameters[1]))
 
             # Append to image variables (becomes index 1)
-            slice_dim = np.array([coord_w, coord_h, image_num])
+            slice_dim = np.array([coord_w, coord_h, image_num]).astype(np.int32)
             self.image_variables.append(slice_dim)
 
             # Through downsampling, obtain the output image dimensions
