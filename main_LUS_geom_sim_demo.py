@@ -16,11 +16,15 @@ import susi.pycuda_simulation.intensity_volume as ivol
 # Load the segmented volume
 liver_volume = svol.SegmentedVolume(config_dir="config/models_binary_LUS_config.json",
                                     mesh_dir="data/data_LUS/",
-                                    voxel_size=0.5)
+                                    voxel_size=0.5,
+                                    downsampling=2,
+                                    image_num=100)
 # Load the intensity volume
 ct_volume = ivol.IntensityVolume(config_dir="config/models_intensity_LUS_config.json",
                                  vol_dir="data/data_LUS/CT_Dicom/000/",
-                                 file_type="dicom")
+                                 file_type="dicom",
+                                 downsampling=2,
+                                 image_num=100)
 
 # Define a set of 100 poses, and slice generated volumes
 pose = np.array([[-0.46,	0.29, -0.84	, -41.77],
@@ -34,10 +38,10 @@ poses[2, 3:400:4] = poses[2, 3:400:4] - np.arange(0, 20, 0.2)
 # Simulate binary maps, always matching image_num with the number of poses
 # And using downsampling to reduce image dimensions
 points, binary_map, colored_map = \
-    liver_volume.simulate_image(poses=poses, downsampling=2, image_num=100)
+    liver_volume.simulate_image(poses=poses, image_num=100)
 
 points, ct_map = \
-    ct_volume.simulate_image(poses=poses, downsampling=2, image_num=100)
+    ct_volume.simulate_image(poses=poses, image_num=100)
 
 
 # Show results image by image

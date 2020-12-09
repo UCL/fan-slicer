@@ -1,6 +1,6 @@
 # coding=utf-8
 
-# pylint:disable=too-many-locals,unsupported-assignment-operation
+# pylint:disable=too-many-locals,unsupported-assignment-operation,too-many-instance-attributes
 
 """
 Module with intensity volume class, to be used
@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import pydicom as dicom
 import nibabel as nib
 import pycuda.driver as drv
+import pycuda.gpuarray as gpua
 import susi.pycuda_simulation.cuda_reslicing as cres
 
 
@@ -26,6 +27,8 @@ class IntensityVolume:
     def __init__(self,
                  config_dir,
                  vol_dir,
+                 image_num=1,
+                 downsampling=1,
                  file_type='dicom'):
         """
         Create intensity volume object
@@ -34,6 +37,8 @@ class IntensityVolume:
         :param vol_dir: file with 3D volume
         :param file_type: type of 3D volume to be loaded,
         currently nii or dicom
+        :param image_num: number of images to consider for preallocation
+        :param downsampling: downsampling factor on image dimensions
         """
         self.planar_resolution = None
         self.ct_volume = None
@@ -57,6 +62,21 @@ class IntensityVolume:
 
         if file_type == 'nii':
             self.load_volume_from_nii(vol_dir)
+
+        # In order to speed up slicing, preallocate variables
+        # Call function to preallocate relevant variables
+        # to an existing list, first the GPU ones
+        self.g_variables = []
+        # Image dimensioning parameters
+        self.image_variables = []
+        # Kernel dimensioning
+        self.blockdim = np.array([1, 1])
+        # Initialise image num and downsample
+        self.image_num = None
+        self.downsampling = None
+        # Now run allocation to set these vars
+        self.preallocate_gpu_var(image_num=image_num,
+                                 downsampling=downsampling)
 
     def load_volume_from_dicom(self, dicom_dir):
         """
@@ -182,116 +202,260 @@ class IntensityVolume:
             plt.imshow(self.ct_volume[:, :, z_ind], cmap='gray')
             plt.pause(0.01)
 
-    def simulate_image(self,
-                       poses=np.eye(4),
-                       image_num=1,
-                       downsampling=1):
+    def preallocate_gpu_var(self,
+                            image_num,
+                            downsampling):
         """
-        Function that generates a set of 2D CT images from multiple
-        segmented models stored in self.config. Uses the function
-        intensity_slice_volume or linear_intensity_slice_volume
+        Function to generate local gpu variables that will
+        be used for simulation. Variable sizes depend on the
+        config parameters. g_ prefix indicates gpu variables
 
-        :param poses: array with probe poses
-        :param image_num: number of images to simulate
+        :param image_num: maximum number of images to be simulated
         :param downsampling: downsampling value on image dimensions
-        :return: positions in 3D, stack of resulting images
+        per call
         """
+        # First check if current image variables are empty or not,
+        # (if they have been set before). If they are not, reset
+        if self.g_variables:
+            self.g_variables = []
 
-        # Get config parameters for the simulation
-        image_dimensions = np.array(self.config["simulation"]
-                                    ["image_dimensions"])
-        pixel_size = np.array(self.config["simulation"]
-                              ["pixel_size"])
-
-        # Check if number of images matches number of poses
-        if poses.shape[1]/4 != image_num:
-            raise ValueError("Input poses do not match image number!")
+        if self.image_variables:
+            self.image_variables = []
 
         # Check if downsampling is at least 1
         if downsampling < 1:
             raise ValueError("Downsampling must be greater than 1")
 
+        # Check if maximum number of images is valid
+        if not isinstance(image_num, int) or image_num <= 0:
+            raise ValueError('image_num must be positive integer')
+
+        self.image_num = image_num
+        self.downsampling = downsampling
+
+        # Now, choose between curvilinear and linear array
+        transducer_type = self.config["simulation"]["transducer"]
+        if transducer_type == "curvilinear":
+            # For the curvilinear case, get
+            # geometrical parameters of fan shape as a float:
+            # 0-Angular ray resolution, 1-ray depth resolution, 2-angle aperture
+            # 3-ray depth, 4-ray offset to origin, 5-ray offset to image top
+            fan_parameters = np.array(self.config["simulation"]["fan_geometry"])
+            fan_parameters[0] = np.deg2rad(fan_parameters[0])
+            fan_parameters[2] = np.deg2rad(fan_parameters[2])
+            fan_parameters[3:6] = fan_parameters[3:6] * fan_parameters[1]
+            fan_parameters = fan_parameters.astype(np.float32)
+            # Append them to image variables (becomes index 0)
+            self.image_variables.append(fan_parameters)
+
+            # Get point cloud dimensions from fan parameters, necessary to
+            # know how many points will be sampled and used for intersection
+            coord_w = len(np.arange((-fan_parameters[2] / 2).astype(np.float32),
+                                    (fan_parameters[2] / 2).astype(np.float32),
+                                    fan_parameters[0]))
+            coord_h = len(np.arange(fan_parameters[4],
+                                    fan_parameters[4] + fan_parameters[3],
+                                    fan_parameters[1]))
+
+            # Append to image variables (becomes index 1)
+            slice_dim = np.array([coord_w, coord_h, image_num]).astype(np.int32)
+            self.image_variables.append(slice_dim)
+
+            # Through downsampling, obtain the output image dimensions
+            # and append (becomes index 2)
+            image_dim_2d = np.array(self.config["simulation"]
+                                    ["image_dimensions"])
+            image_dim = np.append(image_dim_2d / downsampling, image_num) \
+                .astype(np.int32)
+            self.image_variables.append(image_dim)
+
+            # Do the same for the image pixel size (becomes index 3)
+            pixel_size = np.array(self.config["simulation"]["pixel_size"])
+            pixel_size = (downsampling * pixel_size).astype(np.float32)
+            self.image_variables.append(pixel_size)
+
+            # Knowing these dimensions, now append preallocate all
+            # GPU variables. First, 2D and 3D positions of the fans
+            # (become index 0 and 1, respectively)
+            self.g_variables. \
+                append(gpua.GPUArray((1, np.prod(slice_dim) * 3),
+                                     dtype=np.float32))
+            # The 3D positions, with the same size (becomes index 1)
+            self.g_variables.\
+                append(gpua.GPUArray((1, np.prod(slice_dim) * 3),
+                                     dtype=np.float32))
+
+            # The fan intersection with the volume (becomes index 2)
+            self.g_variables. \
+                append(gpua.GPUArray((1, np.prod(slice_dim)),
+                                     dtype=np.float32))
+
+            # The volume to be slice, in a 1D array. The only non-empty
+            # array (becomes index 3)
+            volume = self.ct_volume.copy()
+            volume = volume.reshape([1, np.prod(volume.shape)], order="F")
+            self.g_variables.append(gpua.to_gpu(volume.astype(np.float32)))
+
+            # Now, the outputs, with image_dim as dimension, both images
+            # and fan shape outline used for interpolation (become
+            # index 4 and 5, respectively)
+            self.g_variables. \
+                append(gpua.GPUArray((1, np.prod(image_dim)),
+                                     dtype=np.float32))
+            self.g_variables. \
+                append(gpua.GPUArray((1, np.prod(image_dim)),
+                                     dtype=np.int32))
+
+            # Determine optimal blocksize for kernels
+            blockdim_x, blockdim_y = cres.get_block_size(coord_w, coord_h)
+            self.blockdim = np.array([blockdim_x, blockdim_y])
+
+        elif transducer_type == "linear":
+            # For the linear case, variable definition is simpler
+            # Get rectangular plane dimensions first, and append
+            # to image variables (becomes index 0)
+            image_dim_2d = np.array(self.config["simulation"]
+                                    ["image_dimensions"])
+            image_dim = np.append(image_dim_2d / downsampling, image_num) \
+                .astype(np.int32)
+            self.image_variables.append(image_dim)
+
+            # Do the same for the image pixel size (becomes index 1)
+            pixel_size = np.array(self.config["simulation"]["pixel_size"])
+            pixel_size = (downsampling * pixel_size).astype(np.float32)
+            self.image_variables.append(pixel_size)
+
+            # Now preallocate gpu variables, first the positions
+            # (becomes index 0)
+            self.g_variables. \
+                append(gpua.GPUArray((1, np.prod(image_dim) * 3),
+                                     dtype=np.float32))
+
+            # Secondly, volume intersections that do not
+            # need to be warped in this case (becomes index 1)
+            self.g_variables. \
+                append(gpua.GPUArray((1, np.prod(image_dim)),
+                                     dtype=np.float32))
+
+            # The volume to be intersected (becomes
+            # index 2)
+            volume = self.ct_volume.copy()
+            volume = volume.reshape([1, np.prod(volume.shape)], order="F")
+            self.g_variables.append(gpua.to_gpu(volume.astype(np.float32)))
+
+            # Determine optimal blocksize for kernels
+            blockdim_x, blockdim_y = cres.get_block_size(image_dim[0],
+                                                         image_dim[1])
+            self.blockdim = np.array([blockdim_x, blockdim_y])
+        else:
+            # In case the transducer is another option
+            raise ValueError("No valid transducer type!")
+
+    def simulate_image(self,
+                       poses=np.eye(4),
+                       image_num=1,
+                       out_points=False):
+        """
+        Function that generates a set of 2D CT images from
+        intensity volume. Uses the function
+        intensity_slice_volume or linear_intensity_slice_volume
+
+        :param poses: array with probe poses
+        :param image_num: number of images to slice
+        :param out_points: bool to get sampling positions or not
+        :return: positions in 3D, stack of resulting images
+        """
+
+        # Check if number of images matches number of poses
+        if poses.shape[1]/4 != image_num:
+            raise ValueError("Input poses do not match image number!")
+
+        # In order to not fix the number of images to be used, check
+        # if image num is the same as the one considered by the object
+        # If they differ, preallocate again
+        current_image_num = self.image_num
+
+        if image_num != current_image_num:
+            self.preallocate_gpu_var(image_num=image_num,
+                                     downsampling=self.downsampling)
+            print("Number of images was changed from " +
+                  str(current_image_num) + " to " + str(image_num))
+
         # Simulate images
+        volume_dim = self.ct_volume.shape
         if self.config["simulation"]["transducer"] == "curvilinear":
-            # Get curvilinear array parameters
-            fan_parameters = self.config["simulation"]["fan_geometry"]
             points, images = intensity_slice_volume(
-                             self.ct_volume,
+                             self.image_variables,
+                             self.g_variables,
+                             self.blockdim,
                              self.bound_box,
-                             image_dimensions,
-                             fan_parameters,
-                             pixel_size,
+                             volume_dim,
                              self.voxel_size,
                              poses=poses,
-                             image_num=image_num,
-                             downsampling=downsampling)
+                             out_points=out_points)
         else:
             points, images = linear_intensity_slice_volume(
-                             self.ct_volume,
+                             self.image_variables,
+                             self.g_variables,
+                             self.blockdim,
                              self.bound_box,
-                             image_dimensions,
-                             pixel_size,
+                             volume_dim,
                              self.voxel_size,
                              poses=poses,
-                             image_num=image_num,
-                             downsampling=downsampling)
-
+                             out_points=out_points)
         return points, images
 
 
-def intensity_slice_volume(intensity_volume,
+def intensity_slice_volume(image_variables,
+                           g_variables,
+                           blockdim,
                            bound_box,
-                           image_dim,
-                           fan_parameters,
-                           pixel_size,
+                           vol_dim,
                            voxel_size,
-                           poses=np.eye(4),
-                           image_num=1,
-                           downsampling=1):
+                           poses,
+                           out_points=False):
+
     """
     Function that slices an intensity volume with fan shaped sections
     section defined by poses of a curvilinear array
 
-    :param intensity_volume: binary volume to be intersected
-    :param bound_box: bounding box of volume
-    :param image_dim: Number of pixels as [width height]
-    :param fan_parameters: fan shape parameters
-    :param pixel_size: pixel dimensions
-    :param voxel_size: 3D voxel size of binary volume
-    :param poses: array with probe poses
-    :param image_num: number of images to generate
-    :param downsampling: image dimensions downsampling value
+    :param image_variables: image dimensioning variable list
+    :param g_variables: All preallocated GPU variables
+    as described in the preallocation function. A list with
+    the following indexes:
+    0 - fan positions in 2D
+    1 - fan positions in 3D
+    2 - intensities mapped in fan positions
+    3 - the target intensity volume
+    4 - the output images in image space
+    5 - the 2D fan mask outline
+    :param blockdim: block dimensions for CUDA kernels
+    :param bound_box: bounding box of target volume
+    :param vol_dim: 3D intensity volume dimensions
+    :param voxel_size: voxel_size of the volume
+    :param poses: input set of poses
+    :param out_points: bool to get fan positions or not
     :return: positions in 3D, stack of resulting images
     """
-    # Get geometrical parameters of fan shape as a float:
-    # 0-Angular ray resolution, 1-ray depth resolution, 2-angular aperture
-    # 3-ray depth, 4-ray offset to origin, 5-ray offset to image top
-    fan_parameters = np.array(fan_parameters)
-    fan_parameters[0] = np.deg2rad(fan_parameters[0])
-    fan_parameters[2] = np.deg2rad(fan_parameters[2])
-    fan_parameters[3:6] = fan_parameters[3:6] * fan_parameters[1]
-    fan_parameters = fan_parameters.astype(np.float32)
 
-    # Convert inputs to appropriate float and int for cuda kernels,
-    # first pixel size of output images
-    pixel_size = (downsampling * pixel_size).astype(np.float32)
-    # Dimensions, as width, height, and number of images
-    image_dim = np.append(image_dim / downsampling, image_num).astype(np.int32)
-    im_size = image_dim[0] * image_dim[1]
-    # Voxel size of volume to reslice
+    # Get image variables from input
+    fan_parameters = image_variables[0]
+    slice_dim = image_variables[1]
+    image_dim = image_variables[2]
+    pixel_size = image_variables[3]
+
+    # Define voxel size for intersection of intensity volume
     voxel_size = voxel_size.astype(np.float32)
 
-    # Calculate 2D dimensions of the planar fan point cloud using
-    # fan params
-    coord_w = len(np.arange((-fan_parameters[2] / 2).astype(np.float32),
-                            (fan_parameters[2] / 2).astype(np.float32),
-                            fan_parameters[0]))
-    coord_h = len(np.arange(fan_parameters[4],
-                            fan_parameters[4] + fan_parameters[3],
-                            fan_parameters[1]))
+    # Get size of one image, useful to get array of images
+    im_size = image_dim[0] * image_dim[1]
 
-    # Store these dimensions as int
-    slice_dim = np.array([coord_w, coord_h, image_num]).astype(np.int32)
+    # Get block and grid dimensions as int
+    blockdim_x = int(blockdim[0])
+    blockdim_y = int(blockdim[1])
+    griddim_x = int(slice_dim[0] / blockdim_x)
+    griddim_y = int(slice_dim[1] / blockdim_y)
+    image_num = int(slice_dim[2])
 
     # Convert poses to 1D array to be input in a kernel
     pose_array = np.zeros((1, 9 * image_num)).astype(np.float32)
@@ -307,56 +471,43 @@ def intensity_slice_volume(intensity_volume,
         # Allocate the offset
         offset_array[0, 3 * p_ind:3 * (p_ind + 1)] = pose[0:3, 1]
 
-    # 1-Run position computation kernel, first assign position output,
-    # with float, both in 2D and 3D
-    positions_2d = np.zeros((1, coord_w * coord_h * image_num * 3))\
-        .astype(np.float32)
-    positions_3d_linear = np.zeros((1, coord_w * coord_h * image_num * 3))\
-        .astype(np.float32)
-    # Get kernel
+    # 1-Run position computation kernel, acts on index 0 and 1 of
+    # the gpu variables, get kernel
     transform_kernel = cres.reslicing_kernels.get_function("transform")
     # Then run it
-    transform_kernel(drv.Out(positions_3d_linear),
-                     drv.Out(positions_2d),
+    transform_kernel(g_variables[1],
+                     g_variables[0],
                      drv.In(pose_array),
                      drv.In(offset_array),
                      drv.In(fan_parameters),
                      np.int32(image_num),
-                     block=(1, 1, 3),
-                     grid=(coord_w, coord_h, image_num))
+                     block=(blockdim_x, blockdim_y, 3),
+                     grid=(griddim_x, griddim_y, image_num))
 
-    # Collect 1D Output, and convert to Nx3 output
-    positions_3d = positions_3d_linear.\
-        reshape([3, coord_w * coord_h * image_num]).T
+    # Collect the output to a CPU array
+    positions_3d = np.empty((1, np.prod(slice_dim) * 3), dtype=np.float32)
+    # In case points are to be used or visualised (with out_points as True)
+    if out_points is True:
+        g_variables[1].get(positions_3d)
+        positions_3d = positions_3d.reshape([3, np.prod(slice_dim)]).T
 
     # 2-Next step, run slicing kernel, where intensity values are
-    # placed in the positions. First assign the output with float
-    intensity_maps = np.zeros((1, coord_w * coord_h * image_num))\
-        .astype(np.float32)
+    # placed in the positions. Define volume dimensions
     intensity_volume_dims = np.hstack((bound_box[0, :],
-                                       intensity_volume.shape[0],
-                                       intensity_volume.shape[1],
-                                       intensity_volume.shape[2]))\
-        .astype(np.float32)
-
-    # Put the 3D volume in one 1D array
-    intensity_volume_linear = intensity_volume.astype(np.float32)
-    intensity_volume_linear = intensity_volume_linear\
-        .reshape([1, np.prod(intensity_volume.shape)], order="F")
+                                       vol_dim[0],
+                                       vol_dim[1],
+                                       vol_dim[2])).astype(np.float32)
 
     # Call kernel from file
     slice_kernel = cres.reslicing_kernels.get_function('weighted_slice')
-    slice_kernel(drv.Out(intensity_maps),
-                 drv.In(positions_3d_linear),
-                 drv.In(intensity_volume_linear),
+    slice_kernel(g_variables[2],
+                 g_variables[1],
+                 g_variables[3],
                  drv.In(intensity_volume_dims),
                  drv.In(voxel_size),
                  drv.In(slice_dim),
-                 block=(1, 1, 1),
-                 grid=(coord_w, coord_h, image_num))
-
-    # This line is to see the unwarped intersection for debugging purposes
-    # intensity_maps_output = intensity_maps.reshape(coord_h, coord_w)
+                 block=(blockdim_x, blockdim_y, 1),
+                 grid=(griddim_x, griddim_y, image_num))
 
     # 3-Map pixels to fan like image
     # Define bounds of image output in 2d coordinates as float
@@ -365,34 +516,42 @@ def intensity_slice_volume(intensity_volume,
                                    image_dim[1]]).astype(np.float32)
 
     # Allocate output images, the intensity image as a float, and the
-    # fan mask as an int
-    intensity_images = np.zeros((1, np.prod(image_dim))).astype(np.float32)
-    mask = np.zeros((1, np.prod(image_dim))).astype(np.int32)
+    # fan outline as an int. These must be in CPU.
+    intensity_images = np.empty((1, np.prod(image_dim)), dtype=np.float32)
+    masks = np.empty((1, np.prod(image_dim)), dtype=np.int32)
     # Call kernel from file
     map_kernel = cres.reslicing_kernels.get_function('intensity_map_back')
+
     # Then run it, multiplying coordinates value by a 1000, in order
     # to avoid sampling errors
-    map_kernel(drv.Out(intensity_images),
-               drv.Out(mask),
-               drv.In(intensity_maps),
-               drv.In(positions_2d*1000),
+    map_kernel(g_variables[4],
+               g_variables[5],
+               g_variables[2],
+               g_variables[0]*1000,
                drv.In(slice_dim),
                drv.In(image_bounding_box),
                drv.In(pixel_size*1000),
-               block=(1, 1, 1),
-               grid=(coord_w, coord_h, image_num))
+               block=(blockdim_x, blockdim_y, 1),
+               grid=(griddim_x, griddim_y, image_num))
 
     # Create a volume with generated images
     intensity_image_array = np.zeros((image_dim[1],
                                       image_dim[0],
                                       image_dim[2])).astype(np.float32)
+
+    # Gather the results
+    g_variables[4].get(intensity_images)
+    g_variables[4].fill(0)
+    g_variables[5].get(masks)
+    g_variables[5].fill(0)
+
     for plane in range(image_num):
         # Get image and reshape it
         current_image = intensity_images[0, im_size*plane:
                                          im_size*(plane+1)]
         # Get masks that weight values
-        current_mask = mask[0, im_size*plane:
-                            im_size*(plane + 1)]
+        current_mask = masks[0, im_size*plane:
+                             im_size*(plane + 1)]
         # Normalise by amount of points added to image output, using the
         # the occurrences output by mask, ignoring divide error
         with np.errstate(divide='ignore'):
@@ -410,41 +569,50 @@ def intensity_slice_volume(intensity_volume,
     return positions_3d, intensity_image_array
 
 
-def linear_intensity_slice_volume(intensity_volume,
+def linear_intensity_slice_volume(image_variables,
+                                  g_variables,
+                                  blockdim,
                                   bound_box,
-                                  image_dim,
-                                  pixel_size,
+                                  vol_dim,
                                   voxel_size,
-                                  poses=np.eye(4),
-                                  image_num=1,
-                                  downsampling=1):
+                                  poses,
+                                  out_points=False):
     """
     Function that slices an intensity volume with rectangular sections
     defined by poses of a linear array
 
-    :param intensity_volume: volume to be intersected
-    :param bound_box: bounding box of volume
-    :param image_dim: Number of pixels as [width height]
-    :param pixel_size: pixel dimensions
-    :param voxel_size: 3D voxel size of binary volume (3 values)
-    :param poses: array with probe poses
-    :param image_num: number of images to generate
-    :param downsampling: image dimensions downsampling value
+    :param image_variables: image dimensioning variable list
+    :param g_variables: All preallocated GPU variables
+    as described in the preallocation function. A list with
+    the following indexes:
+    0 - rectangle positions in 3D
+    1 - rectangular intensity images
+    2 - the target intensity volume
+    :param blockdim: block dimensions for CUDA kernels
+    :param bound_box: bounding box of target volume
+    :param vol_dim: 3D intensity volume dimensions
+    :param voxel_size: voxel_size of the volume
+    :param poses: input set of poses
+    :param out_points: bool to get rectangular positions or not
     :return: positions in 3D, stack of resulting images
     """
 
-    # Convert inputs to appropriate float and int for cuda kernels,
-    # first pixel size of output images
-    pixel_size = downsampling * pixel_size.astype(np.float32)
-    # Dimensions, as width, height, and number of images
-    image_dim = np.append(image_dim / downsampling, image_num).astype(np.int32)
-    # Voxel size of volume to reslice
+    # Get image variables from input
+    image_dim = image_variables[0]
+    pixel_size = image_variables[1]
+
+    # Define voxel size for intersection of intensity volume
     voxel_size = voxel_size.astype(np.float32)
 
-    # Get image dims
-    coord_w = int(image_dim[0])
-    coord_h = int(image_dim[1])
-    im_size = coord_w * coord_h
+    # Get size of one image, useful to get array of images
+    im_size = image_dim[0] * image_dim[1]
+
+    # Get block and grid dimensions as int
+    blockdim_x = int(blockdim[0])
+    blockdim_y = int(blockdim[1])
+    griddim_x = int(image_dim[0] / blockdim_x)
+    griddim_y = int(image_dim[1] / blockdim_y)
+    image_num = int(image_dim[2])
 
     # Convert poses to 1D array to be input in a kernel
     pose_array = np.zeros((1, 9 * image_num)).astype(np.float32)
@@ -456,57 +624,58 @@ def linear_intensity_slice_volume(intensity_volume,
                        pose[1, 0:2], pose[1, 3],
                        pose[2, 0:2], pose[2, 3]))
 
-    # 1-Run position computation kernel, first assign position output,
-    # with float
-    positions_3d_linear = np.zeros((1, np.prod(image_dim)*3))\
-        .astype(np.float32)
-    # Get kernel
+    # 1-Run position computation kernel, acts on index 0
+    # the gpu variables, get kernel
     transform_kernel = cres.reslicing_kernels.get_function("linear_transform")
     # Then run it
-    transform_kernel(drv.Out(positions_3d_linear),
+    transform_kernel(g_variables[0],
                      drv.In(pose_array),
                      drv.In(pixel_size),
                      drv.In(image_dim),
-                     block=(1, 1, 3),
-                     grid=(coord_w, coord_h, image_num))
-    # Collect 1D Output, and convert to Nx3 output
-    positions_3d = positions_3d_linear.reshape([3, im_size*image_num]).T
+                     block=(blockdim_x, blockdim_y, 3),
+                     grid=(griddim_x, griddim_y, image_num))
 
-    # 2-Next step, run slicing kernel, where pixels are placed in the positions
-    intensity_maps = np.zeros((1, coord_w*coord_h*image_num))\
-        .astype(np.float32)
+    # Collect the output to a CPU array
+    positions_3d = np.empty((1, np.prod(image_dim) * 3), dtype=np.float32)
+    # In case points are to be used or visualised (with out_points as True)
+    if out_points is True:
+        g_variables[0].get(positions_3d)
+        positions_3d = positions_3d.reshape([3, np.prod(image_dim)]).T
+
+    # 2-Next step, run slicing kernel, where intensity values are
+    # placed in the positions. Define volume dimensions
     intensity_volume_dims = np.hstack((bound_box[0, :],
-                                       intensity_volume.shape[0],
-                                       intensity_volume.shape[1],
-                                       intensity_volume.shape[2]))\
-        .astype(np.float32)
+                                       vol_dim[0],
+                                       vol_dim[1],
+                                       vol_dim[2])).astype(np.float32)
 
-    # Allocate the intensities volume in a 1D array
-    intensity_volume_linear = intensity_volume.astype(np.float32)
-    intensity_volume_linear = intensity_volume_linear \
-        .reshape([1, np.prod(intensity_volume.shape)], order="F")
+    # Allocate space for output images, in CPU
+    intensity_images = np.empty((1, np.prod(image_dim)), dtype=np.float32)
 
     # Call kernel from file
     slice_kernel = cres.reslicing_kernels.get_function('weighted_slice')
-    slice_kernel(drv.Out(intensity_maps),
-                 drv.In(positions_3d_linear),
-                 drv.In(intensity_volume_linear),
+    slice_kernel(g_variables[1],
+                 g_variables[0],
+                 g_variables[2],
                  drv.In(intensity_volume_dims),
                  drv.In(voxel_size),
                  drv.In(image_dim),
-                 block=(1, 1, 1),
-                 grid=(coord_w, coord_h, image_num))
+                 block=(blockdim_x, blockdim_y, 1),
+                 grid=(griddim_x, griddim_y, image_num))
 
     # Create a volume with generated images
-    intensity_image_array = np.zeros((coord_h,
-                                      coord_w,
-                                      image_num)).astype(np.float32)
+    intensity_image_array = np.zeros((image_dim[1],
+                                      image_dim[0],
+                                      image_dim[2])).astype(np.float32)
+
+    # Gather the results
+    g_variables[1].get(intensity_images)
 
     for plane in range(image_num):
         # Get each image and reshape it
-        current_image = intensity_maps[0, im_size*plane:
-                                       im_size*(plane+1)]
-        current_image = current_image.reshape(coord_h, coord_w)
+        current_image = intensity_images[0, im_size*plane:
+                                         im_size*(plane+1)]
+        current_image = current_image.reshape(image_dim[1], image_dim[0])
         # Allocate to output
         intensity_image_array[:, :, plane] = current_image
 

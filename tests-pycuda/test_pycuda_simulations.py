@@ -69,21 +69,23 @@ def test_binary_image_sim():
     # Load the segmented volume
     liver_volume = svol.SegmentedVolume(config_dir=config_dir1,
                                         mesh_dir=mesh_dir,
-                                        voxel_size=0.5)
+                                        voxel_size=0.5,
+                                        downsampling=2,
+                                        image_num=2)
     # Simulate images
     _, _, colored_map1 = \
         liver_volume.simulate_image(poses=test_poses,
-                                    downsampling=2,
                                     image_num=2)
 
     # Load the segmented volume
     liver_volume = svol.SegmentedVolume(config_dir=config_dir2,
                                         mesh_dir=mesh_dir,
-                                        voxel_size=0.5)
+                                        voxel_size=0.5,
+                                        downsampling=2,
+                                        image_num=2)
     # Simulate images
     _, _, colored_map2 = \
         liver_volume.simulate_image(poses=test_poses,
-                                    downsampling=2,
                                     image_num=2)
 
     # Assert the four images
@@ -138,20 +140,20 @@ def test_intensity_image_sim():
     # Test first config, load the volume
     ct_volume = ivol.IntensityVolume(config_dir=config_dir1,
                                      vol_dir=vol_dir,
-                                     file_type="dicom")
+                                     file_type="dicom",
+                                     downsampling=2)
     # Simulate images with first config
     _, ct_map = \
         ct_volume.simulate_image(poses=test_poses,
-                                 downsampling=2,
                                  image_num=2)
     # Repeat with second config
     ct_volume = ivol.IntensityVolume(config_dir=config_dir2,
                                      vol_dir=vol_dir,
-                                     file_type="dicom")
+                                     file_type="dicom",
+                                     downsampling=2)
     # Simulate images with first config
     _, ct_map2 = \
         ct_volume.simulate_image(poses=test_poses,
-                                 downsampling=2,
                                  image_num=2)
 
     # Assert the four resulting images
@@ -208,21 +210,23 @@ def test_linear_probe_sim():
     # Test intensity images
     ct_volume = ivol.IntensityVolume(config_dir=config_dir,
                                      vol_dir=vol_dir,
-                                     file_type="dicom")
+                                     file_type="dicom",
+                                     downsampling=2,
+                                     image_num=2)
     # Simulate images with first config
     _, ct_map = \
         ct_volume.simulate_image(poses=test_poses,
-                                 downsampling=2,
                                  image_num=2)
 
     # Test binary/segmented images
     liver_volume = svol.SegmentedVolume(config_dir=config_dir,
                                         mesh_dir=mesh_dir,
-                                        voxel_size=0.5)
+                                        voxel_size=0.5,
+                                        downsampling=2,
+                                        image_num=2)
     # Simulate images
     _, _, colored_map = \
         liver_volume.simulate_image(poses=test_poses,
-                                    downsampling=2,
                                     image_num=2)
 
     # Assert the four resulting images

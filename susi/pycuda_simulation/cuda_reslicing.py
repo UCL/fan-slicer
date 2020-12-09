@@ -1,11 +1,14 @@
 # coding=utf-8
 
 """
-File that holds C++ CUDA kernels used for simulation
+File that holds C++ CUDA kernels used for simulation, and
+other relevant functions
 """
 
 # pylint:disable=unused-import,duplicate-code
 
+import numpy as np
+import pycuda.driver as drv
 import pycuda.autoinit
 from pycuda.compiler import SourceModule
 
@@ -371,3 +374,50 @@ __global__ void intensity_map_back(float *intensity_images, int *binary_masks, c
     }
 }
 """)
+
+
+# Function to estimate blocksize efficiently
+def get_block_size(dim_x,
+                   dim_y):
+    """
+    Function to calculate block size according to x and y
+    dimensions of images to be sampled
+
+    :param dim_x: x dimension
+    :param dim_y: y dimension
+    :return: 2 block size parameters
+    """
+    # Consider a limited set of prime numbers
+    prime_list = np.array([2, 3, 5, 7])
+    # Get GPU size limits, max in x, max in y, and block max
+    max_x = pycuda.autoinit.device.get_attribute(
+                drv.device_attribute.MAX_BLOCK_DIM_Y)
+    max_y = pycuda.autoinit.device.get_attribute(
+                drv.device_attribute.MAX_BLOCK_DIM_Y)
+    max_b = pycuda.autoinit.device.get_attribute(
+                drv.device_attribute.MAX_THREADS_PER_BLOCK)/3
+
+    # Set initial values for block sizes
+    b_x = 1
+    b_y = 1
+    # Now divide dims by primes
+    for prime in prime_list:
+        # First for x
+        while np.mod(dim_x, prime) == 0 and \
+                b_x * prime < max_x and \
+                b_x * prime * b_y < max_b:
+            # Divid dim
+            dim_x = dim_x / prime
+            # Increase blocksize
+            b_x = b_x * prime
+
+        # Then for y
+        while np.mod(dim_y, prime) == 0 and \
+                b_y * prime < max_y and \
+                b_x * prime * b_y < max_b:
+            # Divid dim
+            dim_y = dim_y / prime
+            # Increase blocksize
+            b_y = b_y * prime
+
+    return b_x, b_y
