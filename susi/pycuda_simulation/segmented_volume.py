@@ -416,7 +416,7 @@ class SegmentedVolume:
 
     def show_plane(self,
                    image_array,
-                   image_indexes,
+                   image_index,
                    point_array):
         """
         Show intersection and plane geometry in 3D model
@@ -424,7 +424,7 @@ class SegmentedVolume:
         needs improvements
 
         :param image_array: stack of images to show
-        :param image_indexes: stack index of image to be shown
+        :param image_index: stack index of image to be shown
         :param point_array: point cloud with stack of plane points
         """
         # Get number of points per plane
@@ -434,15 +434,15 @@ class SegmentedVolume:
         # Add 3D visualisation subplot
         ax_3d = fig.add_subplot(121, projection='3d')
         # Get the meshes to be plotted
-        for model in range(len(self.meshes.keys())):
+        for m_i in range(len(self.meshes.keys())):
             # Add mesh to plot
-            if self.config["simulation"]["simulation_models"][model]:
-                model_name = self.config["models"]["files"][model]\
+            if self.config["simulation"]["simulation_models"][m_i]:
+                model_name = self.config["models"]["files"][m_i]\
                     .replace(" ", "_")
                 model = self.meshes[model_name]
                 # Get color and opacity of models
                 model_color = np.array([self.config["simulation"]
-                                       ["colors"][model]])/255
+                                       ["colors"][m_i]])/255
                 # model_opacity = np.array([self.config["simulation"]
                 #                          ["opacity"][model]])
                 ax_3d.scatter(model.vertices[0:-1:1, 0],
@@ -452,17 +452,17 @@ class SegmentedVolume:
                               alpha=0.5)
 
         # Add plane point cloud
-        ax_3d.scatter(point_array[image_indexes*points_per_plane:
-                                  points_per_plane*(image_indexes + 1):10, 0],
-                      point_array[image_indexes*points_per_plane:
-                                  points_per_plane*(image_indexes + 1):10, 1],
-                      point_array[image_indexes*points_per_plane:
-                                  points_per_plane*(image_indexes + 1):10, 2],
+        ax_3d.scatter(point_array[image_index*points_per_plane:
+                                  points_per_plane*(image_index + 1):10, 0],
+                      point_array[image_index*points_per_plane:
+                                  points_per_plane*(image_index + 1):10, 1],
+                      point_array[image_index*points_per_plane:
+                                  points_per_plane*(image_index + 1):10, 2],
                       color=[0, 0, 0])
 
         # Add 2D visualisation subplot
         ax_2d = fig.add_subplot(122)
-        ax_2d.imshow(image_array[:, :, :, image_indexes])
+        ax_2d.imshow(image_array[:, :, :, image_index])
 
         plt.show()
         return 0
