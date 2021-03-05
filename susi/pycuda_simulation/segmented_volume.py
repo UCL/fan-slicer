@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pycuda.driver as drv
 import pycuda.gpuarray as gpua
+from pycuda.compiler import SourceModule
 from scipy.ndimage.morphology import binary_fill_holes as fill
 from scipy.ndimage.morphology import binary_erosion as erode
 from scipy.ndimage.morphology import binary_dilation as dilate
@@ -76,6 +77,9 @@ class SegmentedVolume:
         # Now run allocation to set these vars
         self.preallocate_bin_gpu_var(image_num=image_num,
                                      downsampling=downsampling)
+
+        # Read kernel source code in C++
+        self.kernel_code = cres.RESLICING_KERNELS
 
     def load_vtk_from_dir(self,
                           mesh_dir):
@@ -374,6 +378,7 @@ class SegmentedVolume:
             # Go through each stored model
             if transducer_type == "curvilinear":
                 points, images, mask = slice_volume(
+                                self.kernel_code,
                                 self.image_variables,
                                 self.g_variables,
                                 self.blockdim,
@@ -383,6 +388,7 @@ class SegmentedVolume:
                                 out_points)
             else:
                 points, images = linear_slice_volume(
+                                 self.kernel_code,
                                  self.image_variables,
                                  self.g_variables,
                                  self.blockdim,
@@ -687,7 +693,8 @@ def ray_triangle_intersection(origin,
     return flag, dist
 
 
-def slice_volume(image_variables,
+def slice_volume(kernel_code,
+                 image_variables,
                  g_variables,
                  blockdim,
                  model_index,
@@ -698,6 +705,7 @@ def slice_volume(image_variables,
     Function that slices a binary volume with fan shaped sections
     section defined by poses of a curvilinear array
 
+    :param kernel_code: CUDA C++ kernel code to compile
     :param image_variables: image dimensioning variable list
     :param g_variables: All preallocated GPU variables
     as described in the preallocation function. A list with
@@ -716,6 +724,9 @@ def slice_volume(image_variables,
     :return: positions in 3D, stack of resulting images, image
     with fan shape outline
     """
+
+    # First, compile kernel code with SourceModule
+    cuda_modules = SourceModule(kernel_code)
 
     # Get image variables from input
     fan_parameters = image_variables[0]
@@ -752,7 +763,7 @@ def slice_volume(image_variables,
 
     # 1-Run position computation kernel, acts on index 0 and 1 of
     # the gpu variables, get kernel
-    transform_kernel = cres.reslicing_kernels.get_function("transform")
+    transform_kernel = cuda_modules.get_function("transform")
     # Then run it
     transform_kernel(g_variables[1],
                      g_variables[0],
@@ -779,7 +790,7 @@ def slice_volume(image_variables,
                                     vol_dim[1],
                                     vol_dim[2])).astype(np.float32)
     # Call kernel from file
-    slice_kernel = cres.reslicing_kernels.get_function('slice')
+    slice_kernel = cuda_modules.get_function('slice')
     # Then run it, using the preallocated g_variable model
     slice_kernel(g_variables[2],
                  g_variables[1],
@@ -801,7 +812,7 @@ def slice_volume(image_variables,
     binary_images = np.empty((1, np.prod(image_dim)), dtype=np.int32)
     mask = np.empty((1, np.prod(image_dim)), dtype=bool)
     # Call kernel from file
-    map_kernel = cres.reslicing_kernels.get_function('map_back')
+    map_kernel = cuda_modules.get_function('map_back')
     # Then run it, multiplying coordinates value by a 1000, in order
     # to avoid sampling errors
     map_kernel(g_variables[3],
@@ -846,7 +857,8 @@ def slice_volume(image_variables,
     return positions_3d, binary_image_array, mask
 
 
-def linear_slice_volume(image_variables,
+def linear_slice_volume(kernel_code,
+                        image_variables,
                         g_variables,
                         blockdim,
                         model_index,
@@ -857,6 +869,7 @@ def linear_slice_volume(image_variables,
     Function that slices a binary volume with rectangular sections
     defined by poses of a linear array
 
+    :param kernel_code: CUDA C++ kernel code to compile
     :param image_variables: image dimensioning variable list
     :param g_variables: All preallocated GPU variables
     as described in the preallocation function. A list with
@@ -871,6 +884,9 @@ def linear_slice_volume(image_variables,
     :param out_points: bool to get rectangular positions or not
     :return: positions in 3D, stack of resulting images
     """
+
+    # First, compile kernel code with SourceModule
+    cuda_modules = SourceModule(kernel_code)
 
     # Get image variables from input
     image_dim = image_variables[0]
@@ -901,7 +917,7 @@ def linear_slice_volume(image_variables,
 
     # 1-Run position computation kernel, acts on index 0
     # the gpu variables, get kernel
-    transform_kernel = cres.reslicing_kernels.get_function("linear_transform")
+    transform_kernel = cuda_modules.get_function("linear_transform")
     # Then run it
     transform_kernel(g_variables[0],
                      drv.In(pose_array),
@@ -930,7 +946,7 @@ def linear_slice_volume(image_variables,
     binary_images = np.empty((1, np.prod(image_dim)), dtype=np.int32)
 
     # Call kernel from file
-    slice_kernel = cres.reslicing_kernels.get_function('slice')
+    slice_kernel = cuda_modules.get_function('slice')
     # Then run it
     slice_kernel(g_variables[1],
                  g_variables[0],

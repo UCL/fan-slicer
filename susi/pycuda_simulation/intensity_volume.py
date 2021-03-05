@@ -16,6 +16,7 @@ import pydicom as dicom
 import nibabel as nib
 import pycuda.driver as drv
 import pycuda.gpuarray as gpua
+from pycuda.compiler import SourceModule
 import susi.pycuda_simulation.cuda_reslicing as cres
 
 
@@ -77,6 +78,9 @@ class IntensityVolume:
         # Now run allocation to set these vars
         self.preallocate_gpu_var(image_num=image_num,
                                  downsampling=downsampling)
+
+        # Read kernel source code in C++
+        self.kernel_code = cres.RESLICING_KERNELS
 
     def load_volume_from_dicom(self, dicom_dir):
         """
@@ -385,6 +389,7 @@ class IntensityVolume:
         volume_dim = self.ct_volume.shape
         if self.config["simulation"]["transducer"] == "curvilinear":
             points, images = intensity_slice_volume(
+                             self.kernel_code,
                              self.image_variables,
                              self.g_variables,
                              self.blockdim,
@@ -395,6 +400,7 @@ class IntensityVolume:
                              out_points=out_points)
         else:
             points, images = linear_intensity_slice_volume(
+                             self.kernel_code,
                              self.image_variables,
                              self.g_variables,
                              self.blockdim,
@@ -406,7 +412,8 @@ class IntensityVolume:
         return points, images
 
 
-def intensity_slice_volume(image_variables,
+def intensity_slice_volume(kernel_code,
+                           image_variables,
                            g_variables,
                            blockdim,
                            bound_box,
@@ -419,6 +426,7 @@ def intensity_slice_volume(image_variables,
     Function that slices an intensity volume with fan shaped sections
     section defined by poses of a curvilinear array
 
+    :param kernel_code: CUDA C++ kernel code to compile
     :param image_variables: image dimensioning variable list
     :param g_variables: All preallocated GPU variables
     as described in the preallocation function. A list with
@@ -437,6 +445,9 @@ def intensity_slice_volume(image_variables,
     :param out_points: bool to get fan positions or not
     :return: positions in 3D, stack of resulting images
     """
+
+    # First, compile kernel code with SourceModule
+    cuda_modules = SourceModule(kernel_code)
 
     # Get image variables from input
     fan_parameters = image_variables[0]
@@ -473,7 +484,7 @@ def intensity_slice_volume(image_variables,
 
     # 1-Run position computation kernel, acts on index 0 and 1 of
     # the gpu variables, get kernel
-    transform_kernel = cres.reslicing_kernels.get_function("transform")
+    transform_kernel = cuda_modules.get_function("transform")
     # Then run it
     transform_kernel(g_variables[1],
                      g_variables[0],
@@ -499,7 +510,7 @@ def intensity_slice_volume(image_variables,
                                        vol_dim[2])).astype(np.float32)
 
     # Call kernel from file
-    slice_kernel = cres.reslicing_kernels.get_function('weighted_slice')
+    slice_kernel = cuda_modules.get_function('weighted_slice')
     slice_kernel(g_variables[2],
                  g_variables[1],
                  g_variables[3],
@@ -520,7 +531,7 @@ def intensity_slice_volume(image_variables,
     intensity_images = np.empty((1, np.prod(image_dim)), dtype=np.float32)
     masks = np.empty((1, np.prod(image_dim)), dtype=np.int32)
     # Call kernel from file
-    map_kernel = cres.reslicing_kernels.get_function('intensity_map_back')
+    map_kernel = cuda_modules.get_function('intensity_map_back')
 
     # Then run it, multiplying coordinates value by a 1000, in order
     # to avoid sampling errors
@@ -569,7 +580,8 @@ def intensity_slice_volume(image_variables,
     return positions_3d, intensity_image_array
 
 
-def linear_intensity_slice_volume(image_variables,
+def linear_intensity_slice_volume(kernel_code,
+                                  image_variables,
                                   g_variables,
                                   blockdim,
                                   bound_box,
@@ -581,6 +593,7 @@ def linear_intensity_slice_volume(image_variables,
     Function that slices an intensity volume with rectangular sections
     defined by poses of a linear array
 
+    :param kernel_code: CUDA C++ kernel code to compile
     :param image_variables: image dimensioning variable list
     :param g_variables: All preallocated GPU variables
     as described in the preallocation function. A list with
@@ -596,6 +609,9 @@ def linear_intensity_slice_volume(image_variables,
     :param out_points: bool to get rectangular positions or not
     :return: positions in 3D, stack of resulting images
     """
+
+    # First, compile kernel code with SourceModule
+    cuda_modules = SourceModule(kernel_code)
 
     # Get image variables from input
     image_dim = image_variables[0]
@@ -626,7 +642,7 @@ def linear_intensity_slice_volume(image_variables,
 
     # 1-Run position computation kernel, acts on index 0
     # the gpu variables, get kernel
-    transform_kernel = cres.reslicing_kernels.get_function("linear_transform")
+    transform_kernel = cuda_modules.get_function("linear_transform")
     # Then run it
     transform_kernel(g_variables[0],
                      drv.In(pose_array),
@@ -653,7 +669,7 @@ def linear_intensity_slice_volume(image_variables,
     intensity_images = np.empty((1, np.prod(image_dim)), dtype=np.float32)
 
     # Call kernel from file
-    slice_kernel = cres.reslicing_kernels.get_function('weighted_slice')
+    slice_kernel = cuda_modules.get_function('weighted_slice')
     slice_kernel(g_variables[1],
                  g_variables[0],
                  g_variables[2],
