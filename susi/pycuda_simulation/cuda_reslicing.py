@@ -10,12 +10,10 @@ other relevant functions
 import numpy as np
 import pycuda.driver as drv
 import pycuda.autoinit
-from pycuda.compiler import SourceModule
+
 
 # Relevant kernels for reslicing, store in one file
-
-
-reslicing_kernels = SourceModule("""
+RESLICING_KERNELS = """
 __global__ void transform(float *xyz_position, float *xy_position, const float *tracker_array, const float *offset_array, const float *curvilinear_params, const int image_number)
 {   
     // This kernel calculates the position coordinates of multiple fan shaped planes in 3D
@@ -373,7 +371,7 @@ __global__ void intensity_map_back(float *intensity_images, int *binary_masks, c
         }
     }
 }
-""")
+"""
 
 
 # Function to estimate blocksize efficiently
