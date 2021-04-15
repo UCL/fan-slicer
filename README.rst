@@ -1,29 +1,30 @@
-susi
+SliceSampler
 ===============================
 
-.. image:: https://weisslab.cs.ucl.ac.uk/susi/susi/raw/master/project-icon.png
+.. image:: https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler/raw/master/project-icon.png
    :height: 128px
    :width: 128px
-   :target: https://weisslab.cs.ucl.ac.uk/susi/susi
+   :target: https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler
    :alt: Logo
 
-.. image:: https://weisslab.cs.ucl.ac.uk/susi/susi/badges/master/build.svg
-   :target: https://weisslab.cs.ucl.ac.uk/susi/susi/pipelines
+.. image:: https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler/badges/master/build.svg
+   :target: https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler/pipelines
    :alt: GitLab-CI test status
 
-.. image:: https://weisslab.cs.ucl.ac.uk/susi/susi/badges/master/coverage.svg
-    :target: https://weisslab.cs.ucl.ac.uk/susi/susi/commits/master
+.. image:: https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler/badges/master/coverage.svg
+    :target: https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler/commits/master
     :alt: Test coverage
 
-.. image:: https://readthedocs.org/projects/susi/badge/?version=latest
-    :target: http://susi.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/slicesampler/badge/?version=latest
+    :target: http://slicesampler.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
 
 
 Author: João Ramalhinho
 
-SliceSampler is developed at the `Wellcome EPSRC Centre for Interventional and Surgical Sciences`_, part of `University College London (UCL)`_.
+SliceSampler is a python and CUDA package used for the sampling of 2D fan-shaped slices from a 3D volume. 
+SliceSampler is developed at the `Wellcome EPSRC Centre for Interventional and Surgical Sciences`_.
 
 Developing
 ----------
