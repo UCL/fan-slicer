@@ -5,9 +5,9 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import susi.pycuda_simulation.mesh as mesh
-import susi.pycuda_simulation.segmented_volume as svol
-import susi.pycuda_simulation.intensity_volume as ivol
+import slicesampler.pycuda_simulation.mesh as mesh
+import slicesampler.pycuda_simulation.segmented_volume as svol
+import slicesampler.pycuda_simulation.intensity_volume as ivol
 
 # These tests access the data in data_LUS and data_EUS
 # used in the demo scripts

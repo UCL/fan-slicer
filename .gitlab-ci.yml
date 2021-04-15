@@ -97,12 +97,12 @@ deploy docs to staging:
   <<: *deploy-docs-skip-template
   script:
     # Note: the group/username directory must already exist on the server before calling this command
-    - rsync -avz -e'ssh -v' --numeric-ids --delete doc/build/html/* staging_docs_rsync:/susi 2>&1
+    - rsync -avz -e'ssh -v' --numeric-ids --delete doc/build/html/* staging_docs_rsync:/slicesampler 2>&1
   tags:
     - docs-staging
   environment:
     name: staging
-    url: http://weisslab-lin.cs.ucl.ac.uk/staging//susi
+    url: http://weisslab-lin.cs.ucl.ac.uk/staging//slicesampler
   only:
     - master
 
@@ -110,7 +110,7 @@ deploy docs to production:
   <<: *deploy-docs-skip-template
   script:
     # Note: the group/username directory must already exist on the server before calling this command
-    - rsync -avz -e'ssh -v' --numeric-ids --delete doc/build/html/* production_docs_rsync:/susi 2>&1
+    - rsync -avz -e'ssh -v' --numeric-ids --delete doc/build/html/* production_docs_rsync:/slicesampler 2>&1
   tags:
     - docs-production
   environment:
@@ -126,7 +126,7 @@ deploy pip to PyPI:
 
   environment:
     name: PyPI
-    url: https://pypi.python.org/pypi/susi
+    url: https://pypi.python.org/pypi/slicesampler
 
   tags:
     - pip-production

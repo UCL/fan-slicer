@@ -21,9 +21,9 @@ susi
 
 
 
-Author: Ester Bonmati
+Author: João Ramalhinho
 
-Simulation of UltraSound Images (SUSI) is developed at the `Wellcome EPSRC Centre for Interventional and Surgical Sciences`_, part of `University College London (UCL)`_.
+SliceSampler is developed at the `Wellcome EPSRC Centre for Interventional and Surgical Sciences`_, part of `University College London (UCL)`_.
 
 Developing
 ----------
@@ -35,7 +35,7 @@ You can clone the repository using the following command:
 
 ::
 
-    git clone https://weisslab.cs.ucl.ac.uk/susi/susi
+    git clone https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler
 
 
 Adding dependencies
@@ -43,7 +43,7 @@ Adding dependencies
 
 Dependencies must be specified in requirements.txt, as this is used
 by tox to automatically install the dependencies in a clean virtual
-env in ```susi/.tox```.
+env in ```slicesampler/.tox```.
 
 
 Running tests
@@ -51,9 +51,9 @@ Running tests
 Pytest is used for running unit tests, but it is run via tox:
 ::
 
-    git clone https://weisslab.cs.ucl.ac.uk/susi/susi.git
-    cd susi
-    tox
+    git clone https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler.git
+    cd slicesampler
+    tox -e pycuda
 
 and tox will install all dependencies then run pytest and pylint.
 
@@ -85,7 +85,7 @@ You can pip install directly from the repository as follows:
 
 ::
 
-    pip install git+https://weisslab.cs.ucl.ac.uk/susi/susi
+    pip install git+https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler
 
 
 
@@ -115,7 +115,7 @@ Supported by `Wellcome`_ and `EPSRC`_.
 
 
 .. _`Wellcome EPSRC Centre for Interventional and Surgical Sciences`: http://www.ucl.ac.uk/weiss
-.. _`source code repository`: https://weisslab.cs.ucl.ac.uk/susi/susi
+.. _`source code repository`: https://weisslab.cs.ucl.ac.uk/UltrasoundNoTracker/slicesampler
 .. _`scikit-surgery`: https://github.com/UCL/scikit-surgery/wiki
 .. _`University College London (UCL)`: http://www.ucl.ac.uk/
 .. _`Wellcome`: https://wellcome.ac.uk/

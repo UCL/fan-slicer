@@ -8,7 +8,7 @@ Ultrasound planes in the original CT
 
 import numpy as np
 import matplotlib.pyplot as plt
-import susi.pycuda_simulation.intensity_volume as ivol
+import slicesampler.pycuda_simulation.intensity_volume as ivol
 
 
 ct_volume = ivol.IntensityVolume(vol_dir="data/data_EUS/Case0001_img.nii",

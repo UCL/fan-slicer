@@ -1,6 +1,6 @@
 # coding=utf-8
 """
-Setup for susi
+Setup for slicesampler
 """
 
 from setuptools import setup, find_packages
@@ -11,7 +11,7 @@ with open('README.rst') as f:
     long_description = f.read()
 
 setup(
-    name='susi',
+    name='slicesampler',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description='Simulation of Ultrasound Images',
@@ -57,7 +57,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'susi=susi.__main__:main',
+            'slicesampler=slicesampler.__main__:main',
         ],
     },
 )
