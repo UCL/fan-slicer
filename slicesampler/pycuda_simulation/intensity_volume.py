@@ -30,7 +30,8 @@ class IntensityVolume:
                  vol_dir,
                  image_num=1,
                  downsampling=1,
-                 file_type='dicom'):
+                 file_type='npy',
+                 npy_config=None):
         """
         Create intensity volume object
 
@@ -63,6 +64,9 @@ class IntensityVolume:
 
         if file_type == 'nii':
             self.load_volume_from_nii(vol_dir)
+
+        if file_type == 'npy':
+            self.load_volume_from_npy(vol_dir, npy_config)
 
         # In order to speed up slicing, preallocate variables
         # Call function to preallocate relevant variables
@@ -154,6 +158,7 @@ class IntensityVolume:
 
         :param nii_dir: nii file
         """
+
         nii_file = nib.load(nii_dir)
         volume = nii_file.get_fdata()
         volume = np.flip(volume, axis=0)
@@ -196,6 +201,30 @@ class IntensityVolume:
 
         self.bound_box = np.array([[min_x, min_y, min_z],
                                    [max_x, max_y, max_z]])
+
+    def load_volume_from_npy(self, npy_dir, npy_config):
+        """
+        Loads volume from npy file
+
+        :param npy_dir: nii file
+        :param npy_config: volume resolution for the npy volume
+        """
+        # Add volume data
+        self.ct_volume = np.load(npy_dir)
+
+        # Add resolution parameters, first get config
+        if os.path.isfile(npy_config):
+            npy_config_file = open(npy_config)
+            npy_config = json.load(npy_config_file)
+        else:
+            raise ValueError("No valid config for npy file!")
+
+        # Now load the parameters
+        self.planar_resolution = np.array(npy_config["planar resolution"])
+        self.voxel_size = np.array(npy_config["voxel size"])
+        self.bound_box = np.array(npy_config["bounding box"])
+
+        return 0
 
     def scroll_volume(self):
         """

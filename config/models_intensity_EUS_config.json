@@ -1,8 +1,0 @@
-{
-  "simulation":{
-    "transducer": "curvilinear",
-    "fan_geometry": [0.05, 0.1235, 110, 394, 46, 19],
-    "image_dimensions": [722, 402],
-    "pixel_size": [0.1235, 0.1235]
-  }
-}
