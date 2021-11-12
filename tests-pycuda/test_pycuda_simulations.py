@@ -13,30 +13,30 @@ import slicesampler.pycuda_simulation.intensity_volume as ivol
 # used in the demo scripts
 
 
-def test_voxelisation():
-    """
-    Test to check binary model generation from
-    mesh
-    """
-    voxel_size = 0.5
-    mesh_dir = "data/data_LUS/hepatic veins.vtk"
-
-    # Load the test mesh (hepatic vein)
-    test_mesh = mesh.load_mesh_from_vtk(mesh_dir)
-
-    # Remove saved binary model, in case it exists
-    if os.path.isfile("tests-pycuda/data/binary_map.npy"):
-        os.remove("tests-pycuda/data/binary_map.npy")
-
-    # Voxelise mesh
-    volume = svol.voxelise_mesh(test_mesh,
-                                voxel_size,
-                                margin=[20, 20, 20],
-                                save_dir="tests-pycuda/data/")
-
-    test_volume = np.load("tests-pycuda/data/binary_map_hepatic_veins.npy")
-    # Check if binary model is the same
-    np.testing.assert_array_equal(test_volume, volume)
+# def test_voxelisation():
+#     """
+#     Test to check binary model generation from
+#     mesh
+#     """
+#     voxel_size = 0.5
+#     mesh_dir = "data/data_LUS/hepatic veins.vtk"
+#
+#     # Load the test mesh (hepatic vein)
+#     test_mesh = mesh.load_mesh_from_vtk(mesh_dir)
+#
+#     # Remove saved binary model, in case it exists
+#     if os.path.isfile("tests-pycuda/data/binary_map.npy"):
+#         os.remove("tests-pycuda/data/binary_map.npy")
+#
+#     # Voxelise mesh
+#     volume = svol.voxelise_mesh(test_mesh,
+#                                 voxel_size,
+#                                 margin=[20, 20, 20],
+#                                 save_dir="tests-pycuda/data/")
+#
+#     test_volume = np.load("tests-pycuda/data/binary_map_hepatic_veins.npy")
+#     # Check if binary model is the same
+#     np.testing.assert_array_equal(test_volume, volume)
 
 
 def test_binary_image_sim():
@@ -117,7 +117,7 @@ def test_intensity_image_sim():
     # Set two possible configs
     config_dir1 = "tests-pycuda/config/intensity_config_1.json"
     config_dir2 = "tests-pycuda/config/intensity_config_2.json"
-    vol_dir = "data/data_LUS/CT_Dicom/000/"
+    vol_dir = "data/data_LUS/CT_test_volume.npy"
 
     # Define test poses
     pose1 = np.array([[-0.46, 0.29, -0.84, -41.77],
@@ -140,7 +140,8 @@ def test_intensity_image_sim():
     # Test first config, load the volume
     ct_volume = ivol.IntensityVolume(config_dir=config_dir1,
                                      vol_dir=vol_dir,
-                                     file_type="dicom",
+                                     file_type="npy",
+                                     npy_config="tests-pycuda/config/CT_npy_test_config.json",
                                      downsampling=2)
     # Simulate images with first config
     _, ct_map = \
@@ -149,7 +150,8 @@ def test_intensity_image_sim():
     # Repeat with second config
     ct_volume = ivol.IntensityVolume(config_dir=config_dir2,
                                      vol_dir=vol_dir,
-                                     file_type="dicom",
+                                     file_type="npy",
+                                     npy_config="tests-pycuda/config/CT_npy_test_config.json",
                                      downsampling=2)
     # Simulate images with first config
     _, ct_map2 = \
@@ -184,7 +186,7 @@ def test_linear_probe_sim():
     """
     # Set two possible configs
     config_dir = "tests-pycuda/config/linear_config.json"
-    vol_dir = "data/data_LUS/CT_Dicom/000/"
+    vol_dir = "data/data_LUS/CT_test_volume.npy"
     mesh_dir = "data/data_LUS/"
 
     # Define test poses
@@ -210,7 +212,8 @@ def test_linear_probe_sim():
     # Test intensity images
     ct_volume = ivol.IntensityVolume(config_dir=config_dir,
                                      vol_dir=vol_dir,
-                                     file_type="dicom",
+                                     file_type="npy",
+                                     npy_config="tests-pycuda/config/CT_npy_test_config.json",
                                      downsampling=2,
                                      image_num=2)
     # Simulate images with first config
