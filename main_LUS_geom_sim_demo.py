@@ -21,8 +21,9 @@ liver_volume = svol.SegmentedVolume(config_dir="config/models_binary_LUS_config.
                                     image_num=100)
 # Load the intensity volume
 ct_volume = ivol.IntensityVolume(config_dir="config/models_intensity_LUS_config.json",
-                                 vol_dir="data/data_LUS/CT_Dicom/000/",
-                                 file_type="dicom",
+                                 vol_dir="data/data_LUS/CT_test_volume.npy",
+                                 file_type="npy",
+                                 npy_config="config/CT_npy_volume_config.json",
                                  downsampling=2,
                                  image_num=100)
 
@@ -47,9 +48,10 @@ points, ct_map = \
 # Show results image by image
 for i in range(100):
     fig = plt.figure()
-    plt.cla()
-    ax = fig.add_subplot(121)
-    ax.imshow(colored_map[:, :, :, i])
-    ax = fig.add_subplot(122)
-    ax.imshow(ct_map[:, :, i], cmap='gray', vmin=-200)
+    plt.clf()
+    ax1 = fig.add_subplot(121)
+    ax1.imshow(colored_map[:, :, :, i])
+    ax2 = fig.add_subplot(122)
+    ax2.imshow(ct_map[:, :, i], cmap='gray', vmin=-200)
+    plt.tight_layout()
     plt.show()
