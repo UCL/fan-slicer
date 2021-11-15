@@ -13,30 +13,30 @@ import slicesampler.pycuda_simulation.intensity_volume as ivol
 # used in the demo scripts
 
 
-# def test_voxelisation():
-#     """
-#     Test to check binary model generation from
-#     mesh
-#     """
-#     voxel_size = 0.5
-#     mesh_dir = "data/data_LUS/hepatic veins.vtk"
-#
-#     # Load the test mesh (hepatic vein)
-#     test_mesh = mesh.load_mesh_from_vtk(mesh_dir)
-#
-#     # Remove saved binary model, in case it exists
-#     if os.path.isfile("tests-pycuda/data/binary_map.npy"):
-#         os.remove("tests-pycuda/data/binary_map.npy")
-#
-#     # Voxelise mesh
-#     volume = svol.voxelise_mesh(test_mesh,
-#                                 voxel_size,
-#                                 margin=[20, 20, 20],
-#                                 save_dir="tests-pycuda/data/")
-#
-#     test_volume = np.load("tests-pycuda/data/binary_map_hepatic_veins.npy")
-#     # Check if binary model is the same
-#     np.testing.assert_array_equal(test_volume, volume)
+def test_voxelisation():
+    """
+    Test to check binary model generation from
+    mesh
+    """
+    voxel_size = 0.5
+    mesh_dir = "data/data_LUS/hepatic veins.vtk"
+
+    # Load the test mesh (hepatic vein)
+    test_mesh = mesh.load_mesh_from_vtk(mesh_dir)
+
+    # Remove saved binary model, in case it exists
+    if os.path.isfile("tests-pycuda/data/binary_map.npy"):
+        os.remove("tests-pycuda/data/binary_map.npy")
+
+    # Voxelise mesh
+    volume = svol.voxelise_mesh(test_mesh,
+                                voxel_size,
+                                margin=[20, 20, 20],
+                                save_dir="tests-pycuda/data/")
+
+    test_volume = np.load("tests-pycuda/data/binary_map_hepatic_veins.npy")
+    # Check if binary model is the same
+    np.testing.assert_array_equal(test_volume, volume)
 
 
 def test_binary_image_sim():
