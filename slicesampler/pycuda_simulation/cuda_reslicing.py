@@ -35,9 +35,10 @@ __global__ void transform(float *xyz_position, float *xy_position, const float *
     float line_depth = curvilinear_params[4] + y_index*curvilinear_params[1];
 
     float image_y_offset = curvilinear_params[4] - curvilinear_params[5];
-
-    float sum1 = tracker_array[track_index] * line_depth * sinf(angle);
-    float sum2 = tracker_array[track_index + 1] * line_depth * cosf(angle);
+    
+    float res = 0.000001;
+    float sum1 = tracker_array[track_index] * line_depth * floorf(sinf(angle) / res) * res;
+    float sum2 = tracker_array[track_index + 1] * line_depth * floorf(cosf(angle) / res) * res;
     float sum3 = tracker_array[track_index + 2];
     float offset = offset_array[offset_index] * image_y_offset;
     xyz_position[index] = sum1 + sum2 + sum3 - offset;
