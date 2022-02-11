@@ -46,15 +46,15 @@ __global__ void transform(float *xyz_position, float *xy_position, const float *
 
     if (threadIdx.z == 0)
     {
-        xy_position[index] = line_depth * sinf(angle);
+        xy_position[index] = line_depth * floorf(sinf(angle) / res) * res;
     }
     else if (threadIdx.z == 1)
     {
-        xy_position[index] = line_depth * cosf(angle) - image_y_offset;
+        xy_position[index] = line_depth * floorf(cosf(angle) / res) * res - image_y_offset;
     } 
     else
     {
-        xy_position[index] =0;
+        xy_position[index] = 0;
     }
     
 }
