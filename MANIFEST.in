@@ -1,2 +1,2 @@
 include versioneer.py
-include susi/_version.py
+include fanslicer/_version.py
