@@ -17,8 +17,8 @@ from pycuda.compiler import SourceModule
 from scipy.ndimage.morphology import binary_fill_holes as fill
 from scipy.ndimage.morphology import binary_erosion as erode
 from scipy.ndimage.morphology import binary_dilation as dilate
-import slicesampler.pycuda_simulation.mesh as mesh
-import slicesampler.pycuda_simulation.cuda_reslicing as cres
+import fanslicer.pycuda_simulation.mesh as mesh
+import fanslicer.pycuda_simulation.cuda_reslicing as cres
 
 
 class SegmentedVolume:

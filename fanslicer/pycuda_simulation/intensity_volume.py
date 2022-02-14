@@ -17,7 +17,7 @@ import nibabel as nib
 import pycuda.driver as drv
 import pycuda.gpuarray as gpua
 from pycuda.compiler import SourceModule
-import slicesampler.pycuda_simulation.cuda_reslicing as cres
+import fanslicer.pycuda_simulation.cuda_reslicing as cres
 
 
 class IntensityVolume:

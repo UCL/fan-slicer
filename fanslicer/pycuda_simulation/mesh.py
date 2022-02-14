@@ -77,7 +77,7 @@ def load_mesh_from_vtk(vtk_dir):
     # Extract faces and vertices
     vertices = vtk_to_numpy(dsa.WrapDataObject(polydata).Points)
     faces = vtk_to_numpy(dsa.WrapDataObject(polydata).Polygons)
-    num_faces = np.int(faces.shape[0]/4)
+    num_faces = int(faces.shape[0]/4)
 
     # Reshape faces (VTK array comes with
     # (4 elements per polygon -> Num of vertices, x, y, z)

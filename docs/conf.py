@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# slicesampler documentation build configuration file, created by
+# fanslicer documentation build configuration file, created by
 # sphinx-quickstart on Tue Dec 19 17:02:44 2017.
 #
 # This file is execfile()d with the current directory set to its
@@ -105,7 +105,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 
-# This allows modules to be indexed under the submodule name rather than all appearing under slicesampler
+# This allows modules to be indexed under the submodule name rather than all appearing under fanslicer
 modindex_common_prefix = [
     'fanslicer.'
 ]

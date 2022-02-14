@@ -8,8 +8,8 @@ ultrasound image shapes.
 
 import numpy as np
 import matplotlib.pyplot as plt
-import slicesampler.pycuda_simulation.segmented_volume as svol
-import slicesampler.pycuda_simulation.intensity_volume as ivol
+import fanslicer.pycuda_simulation.segmented_volume as svol
+import fanslicer.pycuda_simulation.intensity_volume as ivol
 
 
 # Load the segmented volume
