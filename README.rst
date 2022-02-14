@@ -1,18 +1,18 @@
 Fan-slicer
 ===============================
 
-.. image:: https://github.com/jramalhinho/fan-slicer/raw/master/project-icon.jpg
+.. image:: https://github.com/jramalhinho/fan-slicer/raw/main/project-icon.jpg
    :height: 128px
    :width: 128px
    :target: https://github.com/jramalhinho/fan-slicer
    :alt: Logo
 
-.. image:: https://github.com/jramalhinho/fan-slicer/badges/master/build.svg
-   :target: https://github.com/jramalhinho/fan-slicer/pipelines
+.. image:: https://github.com/jramalhinho/fan-slicer/workflows/.github/workflows/ci.yml/badge.svg
+   :target: https://github.com/jramalhinho/fan-slicer/actions/
    :alt: GitLab-CI test status
 
-.. image:: https://github.com/jramalhinho/fan-slicer/badges/master/coverage.svg
-    :target: https://github.com/jramalhinho/fan-slicer/commits/master
+.. image:: https://github.com/jramalhinho/fan-slicer/badges/main/coverage.svg
+    :target: https://github.com/jramalhinho/fan-slicer/commits/main
     :alt: Test coverage
 
 .. image:: https://readthedocs.org/projects/fan-slicer/badge/?version=latest
