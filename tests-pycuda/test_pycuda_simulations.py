@@ -9,9 +9,7 @@ import slicesampler.pycuda_simulation.mesh as mesh
 import slicesampler.pycuda_simulation.segmented_volume as svol
 import slicesampler.pycuda_simulation.intensity_volume as ivol
 
-# These tests access the data in data_LUS and data_EUS
-# used in the demo scripts
-
+# These tests access the data used in the demo script
 
 def test_voxelisation():
     """
@@ -19,7 +17,7 @@ def test_voxelisation():
     mesh
     """
     voxel_size = 0.5
-    mesh_dir = "data/data_LUS/hepatic veins.vtk"
+    mesh_dir = "data/hepatic veins.vtk"
 
     # Load the test mesh (hepatic vein)
     test_mesh = mesh.load_mesh_from_vtk(mesh_dir)
@@ -47,7 +45,7 @@ def test_binary_image_sim():
     # Set config
     config_dir1 = "tests-pycuda/config/binary_config_1.json"
     config_dir2 = "tests-pycuda/config/binary_config_2.json"
-    mesh_dir = "data/data_LUS/"
+    mesh_dir = "data/"
 
     # Define test poses
     pose1 = np.array([[-0.46,	0.29, -0.84	, -41.77],
@@ -121,7 +119,7 @@ def test_intensity_image_sim():
     # Set two possible configs
     config_dir1 = "tests-pycuda/config/intensity_config_1.json"
     config_dir2 = "tests-pycuda/config/intensity_config_2.json"
-    vol_dir = "data/data_LUS/CT_test_volume.npy"
+    vol_dir = "data/CT_test_volume.npy"
 
     # Define test poses
     pose1 = np.array([[-0.46, 0.29, -0.84, -41.77],
@@ -194,8 +192,8 @@ def test_linear_probe_sim():
     """
     # Set two possible configs
     config_dir = "tests-pycuda/config/linear_config.json"
-    vol_dir = "data/data_LUS/CT_test_volume.npy"
-    mesh_dir = "data/data_LUS/"
+    vol_dir = "data/CT_test_volume.npy"
+    mesh_dir = "data/"
 
     # Define test poses
     pose1 = np.array([[-0.46, 0.29, -0.84, -41.77],

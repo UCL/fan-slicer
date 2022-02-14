@@ -14,13 +14,13 @@ import slicesampler.pycuda_simulation.intensity_volume as ivol
 
 # Load the segmented volume
 liver_volume = svol.SegmentedVolume(config_dir="config/models_binary_LUS_config.json",
-                                    mesh_dir="data/data_LUS/",
+                                    mesh_dir="data/",
                                     voxel_size=0.5,
                                     downsampling=2,
                                     image_num=10)
 # Load the intensity volume
 ct_volume = ivol.IntensityVolume(config_dir="config/models_intensity_LUS_config.json",
-                                 vol_dir="data/data_LUS/CT_test_volume.npy",
+                                 vol_dir="data/CT_test_volume.npy",
                                  file_type="npy",
                                  npy_config="config/CT_npy_volume_config.json",
                                  downsampling=2,
