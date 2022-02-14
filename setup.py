@@ -1,6 +1,6 @@
 # coding=utf-8
 """
-Setup for slicesampler
+Setup for fan-slicer
 """
 
 from setuptools import setup, find_packages
@@ -11,15 +11,15 @@ with open('README.rst') as f:
     long_description = f.read()
 
 setup(
-    name='slicesampler',
+    name='fanslicer',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description='Simulation of Ultrasound Images',
+    description='',
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    url='https://weisslab.cs.ucl.ac.uk/susi/susi',
-    author='Ester Bonmati',
-    author_email='e.bonmati@ucl.ac.uk',
+    url='https://github.com/jramalhinho/fan-slicer',
+    author='João Ramalhinho',
+    author_email='jdmramalhinho@gmail.com',
     license='BSD-3 license',
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -53,11 +53,11 @@ setup(
     install_requires=[
         'six>=1.10',
         'numpy>=1.11',
-    ],
-
-    entry_points={
-        'console_scripts': [
-            'slicesampler=slicesampler.__main__:main',
-        ],
-    },
+        'pycuda>=2021.1',
+        'vtk',
+        'matplotlib',
+        'scipy',
+        'nibabel',
+        'pydicom'
+    ]
 )
