@@ -3,7 +3,6 @@ Fan-slicer
 
 .. image:: https://github.com/jramalhinho/fan-slicer/raw/main/project-icon.jpg
    :height: 128px
-   :width: 128px
    :target: https://github.com/jramalhinho/fan-slicer
    :alt: Logo
 
