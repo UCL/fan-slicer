@@ -22,11 +22,25 @@ Fan-slicer
 
 Author: João Ramalhinho
 
-SliceSampler is a python and CUDA package used for the sampling of 2D fan-shaped slices from a 3D volume.
-SliceSampler is developed at the `Wellcome EPSRC Centre for Interventional and Surgical Sciences`_.
+Fan-slicer is a python and Pycuda package that enables the sampling of arbitrarily positioned 2D Ultrasound-shaped (fan)
+planes from a 3D volume.
+CUDA kernels are used with Pycuda to enable the fast sampling of multiple images in one run.
+Fan-slicer samples images from both binary and non-binary volumes.
+Additionally, slicing of rectangular planes (linear probe case) is also supported.
+Fan-slicer is developed at the `Wellcome EPSRC Centre for Interventional and Surgical Sciences`_ on top of the
+`Python Template from Scikit-Surgery`_.
 
-Developing
-----------
+Using
+^^^^^
+
+A complete use case example is provided in *simulation_demo.py*.
+This script contains code for the sampling of 10 evenly spaced fan-shaped planes from both 2 volumes:
+
+* An abdominal contrast enhanced CT centered at the liver (a non-binary intensity volume).
+
+* A vessel segmented volume of the same liver (binary volume) that is extracted from vessel tree vtk files.
+Further details on the parameterisation of the planes, pose formulation, and usage of functions
+are provided in the following `guide`_.
 
 Cloning
 ^^^^^^^
@@ -43,7 +57,7 @@ Adding dependencies
 
 Dependencies must be specified in requirements.txt, as this is used
 by tox to automatically install the dependencies in a clean virtual
-env in ```slicesampler/.tox```.
+env in ```fanslicer/.tox```.
 
 
 Running tests
@@ -115,6 +129,7 @@ Supported by `Wellcome`_ and `EPSRC`_.
 
 
 .. _`Wellcome EPSRC Centre for Interventional and Surgical Sciences`: http://www.ucl.ac.uk/weiss
+.. _`Python Template from Scikit-Surgery`: https://github.com/SciKit-Surgery/PythonTemplate
 .. _`source code repository`: https://github.com/jramalhinho/fan-slicer
 .. _`scikit-surgery`: https://github.com/UCL/scikit-surgery/wiki
 .. _`University College London (UCL)`: http://www.ucl.ac.uk/
@@ -122,4 +137,4 @@ Supported by `Wellcome`_ and `EPSRC`_.
 .. _`EPSRC`: https://www.epsrc.ac.uk/
 .. _`contributing guidelines`: https://github.com/jramalhinho/fan-slicer/blob/master/CONTRIBUTING.rst
 .. _`license file`: https://github.com/jramalhinho/fan-slicer/blob/master/LICENSE
-
+.. _`guide`: https://github.com/jramalhinho/fan-slicer/blob/master/USING.rst
