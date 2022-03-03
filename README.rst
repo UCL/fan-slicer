@@ -3,15 +3,15 @@ Fan-slicer
 
 .. image:: https://github.com/jramalhinho/fan-slicer/raw/main/project-icon.jpg
    :height: 128px
-   :target: https://github.com/jramalhinho/fan-slicer
+   :target: https://github.com/UCL/fan-slicer
    :alt: Logo
 
 .. image:: https://github.com/jramalhinho/fan-slicer/workflows/.github/workflows/ci.yml/badge.svg
-   :target: https://github.com/jramalhinho/fan-slicer/actions/
+   :target: https://github.com/UCL/fan-slicer/actions/
    :alt: GitLab-CI test status
 
 .. image:: https://github.com/jramalhinho/fan-slicer/badges/main/coverage.svg
-    :target: https://github.com/jramalhinho/fan-slicer/commits/main
+    :target: https://github.com/UCL/fan-slicer/commits/main
     :alt: Test coverage
 
 .. image:: https://readthedocs.org/projects/fan-slicer/badge/?version=latest
@@ -49,7 +49,7 @@ You can clone the repository using the following command:
 
 ::
 
-    git clone https://github.com/jramalhinho/fan-slicer
+    git clone https://github.com/UCL/fan-slicer
 
 
 Adding dependencies
@@ -65,7 +65,7 @@ Running tests
 Pytest is used for running unit tests, but it is run via tox:
 ::
 
-    git clone https://github.com/jramalhinho/fan-slicer.git
+    git clone https://github.com/UCL/fan-slicer.git
     cd fanslicer
     tox -e pycuda
 
@@ -130,11 +130,11 @@ Supported by `Wellcome`_ and `EPSRC`_.
 
 .. _`Wellcome EPSRC Centre for Interventional and Surgical Sciences`: http://www.ucl.ac.uk/weiss
 .. _`Python Template from Scikit-Surgery`: https://github.com/SciKit-Surgery/PythonTemplate
-.. _`source code repository`: https://github.com/jramalhinho/fan-slicer
+.. _`source code repository`: https://github.com/UCL/fan-slicer
 .. _`scikit-surgery`: https://github.com/UCL/scikit-surgery/wiki
 .. _`University College London (UCL)`: http://www.ucl.ac.uk/
 .. _`Wellcome`: https://wellcome.ac.uk/
 .. _`EPSRC`: https://www.epsrc.ac.uk/
-.. _`contributing guidelines`: https://github.com/jramalhinho/fan-slicer/blob/master/CONTRIBUTING.rst
-.. _`license file`: https://github.com/jramalhinho/fan-slicer/blob/master/LICENSE
-.. _`guide`: https://github.com/jramalhinho/fan-slicer/blob/master/USING.rst
+.. _`contributing guidelines`: https://github.com/UCL/fan-slicer/blob/master/CONTRIBUTING.rst
+.. _`license file`: https://github.com/UCL/fan-slicer/blob/master/LICENSE
+.. _`guide`: https://github.com/UCL/fan-slicer/blob/master/USING.rst

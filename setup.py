@@ -17,7 +17,7 @@ setup(
     description='',
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    url='https://github.com/jramalhinho/fan-slicer',
+    url='https://github.com/UCL/fan-slicer',
     author='João Ramalhinho',
     author_email='jdmramalhinho@gmail.com',
     license='BSD-3 license',
