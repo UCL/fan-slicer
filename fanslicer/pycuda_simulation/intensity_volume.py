@@ -532,8 +532,8 @@ def intensity_slice_volume(kernel_code,
     # 2-Next step, run slicing kernel, where intensity values are
     # placed in the positions. Define volume dimensions
     intensity_volume_dims = np.hstack((bound_box[0, :],
-                                       vol_dim[0],
                                        vol_dim[1],
+                                       vol_dim[0],
                                        vol_dim[2])).astype(np.float32)
 
     # Call kernel from file
