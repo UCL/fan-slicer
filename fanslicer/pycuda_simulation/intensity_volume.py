@@ -102,17 +102,28 @@ class IntensityVolume:
         first_image = dicom.dcmread(dicom_dir + image_list[0])
         # Get planar resolution
         self.planar_resolution = first_image.PixelSpacing
-        # Get z stepping
-        z_step = first_image.SpacingBetweenSlices
-        # Define voxel size
-        self.voxel_size = np.hstack((self.planar_resolution,
-                                     abs(z_step)))
 
         # Get x y z dimensions
         self.xdim = first_image.pixel_array.shape[0]
         self.ydim = first_image.pixel_array.shape[1]
         self.zdim = len(image_list)
         self.ct_volume = np.zeros([self.xdim, self.ydim, self.zdim])
+
+        # Get z stepping by measuring the positions of all images
+        order = []
+        for i in range(self.zdim):
+            # Get image
+            order.append(dicom.dcmread(dicom_dir + image_list[i]).ImagePositionPatient[2])
+
+        max_z = np.max(order)
+        min_z = np.min(order)
+        positions = np.sort(order)
+        sequence = np.argsort(order)
+        z_step = positions[1] - positions[0]
+
+        # Define voxel size
+        self.voxel_size = np.hstack((self.planar_resolution,
+                                     abs(z_step)))
 
         # Get intensity scales
         for dicom_key in first_image.keys():
@@ -121,34 +132,21 @@ class IntensityVolume:
             if first_image[dicom_key].keyword == 'RescaleSlope':
                 intensity_slope = first_image[dicom_key].value
 
-        # Go through every image
-        for i in range(self.zdim):
-            # Get image
-            current_image = dicom.dcmread(dicom_dir + image_list[i]).pixel_array
-            # Add to volume, taking into account z direction
-            if z_step > 0:
-                self.ct_volume[:, :, i] = current_image \
-                    * intensity_slope + intensity_bias
-            else:
-                self.ct_volume[:, :, self.zdim - i - 1] \
-                    = current_image * intensity_slope \
-                    + intensity_bias
-
         # Define bounding box
         min_x = first_image.ImagePositionPatient[0]
         max_x = min_x + self.planar_resolution[0] * (self.xdim - 1)
         min_y = first_image.ImagePositionPatient[1]
         max_y = min_y + self.planar_resolution[1] * (self.xdim - 1)
 
-        if z_step < 0:
-            max_z = first_image.ImagePositionPatient[2]
-            min_z = max_z + z_step * (self.zdim - 1)
-        else:
-            min_z = first_image.ImagePositionPatient[2]
-            max_z = min_z + z_step * (self.zdim - 1)
-
         self.bound_box = np.array([[min_x, min_y, min_z],
                                    [max_x, max_y, max_z]])
+
+        # Go through every image
+        for i in range(self.zdim):
+            # Get image
+            current_image = dicom.dcmread(dicom_dir + image_list[sequence[i]]).pixel_array
+            self.ct_volume[:, :, i] = current_image \
+                * intensity_slope + intensity_bias
 
         return 0
 
@@ -690,8 +688,8 @@ def linear_intensity_slice_volume(kernel_code,
     # 2-Next step, run slicing kernel, where intensity values are
     # placed in the positions. Define volume dimensions
     intensity_volume_dims = np.hstack((bound_box[0, :],
-                                       vol_dim[0],
                                        vol_dim[1],
+                                       vol_dim[0],
                                        vol_dim[2])).astype(np.float32)
 
     # Allocate space for output images, in CPU
