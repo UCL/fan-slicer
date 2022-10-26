@@ -217,6 +217,11 @@ class IntensityVolume:
         else:
             raise ValueError("No valid config for npy file!")
 
+        # Get x y z dimensions
+        self.xdim = self.ct_volume.shape[0]
+        self.ydim = self.ct_volume.shape[1]
+        self.zdim = self.ct_volume.shape[2]
+
         # Now load the parameters
         self.planar_resolution = np.array(npy_config["planar resolution"])
         self.voxel_size = np.array(npy_config["voxel size"])
