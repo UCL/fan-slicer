@@ -1,6 +1,6 @@
 # coding=utf-8
 
-# pylint:disable=too-many-locals,too-many-branches
+# pylint:disable=too-many-locals,too-many-branches,duplicate-code
 
 """
 Module segmented volume class, to be used for
@@ -17,7 +17,7 @@ from pycuda.compiler import SourceModule
 from scipy.ndimage.morphology import binary_fill_holes as fill
 from scipy.ndimage.morphology import binary_erosion as erode
 from scipy.ndimage.morphology import binary_dilation as dilate
-import fanslicer.pycuda_simulation.mesh as mesh
+from fanslicer.pycuda_simulation import mesh
 import fanslicer.pycuda_simulation.cuda_reslicing as cres
 
 
@@ -43,7 +43,7 @@ class SegmentedVolume:
         :param image_num: number of images to consider for preallocation
         :param downsampling: downsampling factor on image dimensions
         """
-        self.binary_volumes = dict()
+        self.binary_volumes = {}
         if voxel_size > 0:
             self.voxel_size = voxel_size
         else:
@@ -51,10 +51,10 @@ class SegmentedVolume:
 
         # Load meshes if a directory is given
         self.config = None
-        self.meshes = dict()
+        self.meshes = {}
         if os.path.isfile(config_dir):
-            config_file = open(config_dir)
-            self.config = json.load(config_file)
+            with open(config_dir, 'r', encoding='utf8') as config_file:
+                self.config = json.load(config_file)
         else:
             raise ValueError("No valid config file!")
 
@@ -124,7 +124,7 @@ class SegmentedVolume:
             raise ValueError("No valid data directory")
 
         # Prepare dictionary that contains models
-        volume_dict = dict()
+        volume_dict = {}
         for model in range(len(self.config['simulation']
                            ['simulation_models'])):
             # Check if model is intended for simulation

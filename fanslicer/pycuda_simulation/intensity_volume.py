@@ -51,8 +51,8 @@ class IntensityVolume:
         self.zdim = None
 
         if os.path.isfile(config_dir):
-            config_file = open(config_dir)
-            self.config = json.load(config_file)
+            with open(config_dir, 'r', encoding='utf8') as config_file:
+                self.config = json.load(config_file)
         else:
             raise ValueError("No valid config file!")
 
@@ -99,7 +99,7 @@ class IntensityVolume:
         image_list.sort()
 
         # Get the parameters of the volume by checking the first image
-        first_image = dicom.dcmread(dicom_dir + image_list[0])
+        first_image = dicom.dcmread(dicom_dir + image_list[0], force=True)
         # Get planar resolution
         self.planar_resolution = first_image.PixelSpacing
 
@@ -113,7 +113,8 @@ class IntensityVolume:
         order = []
         for i in range(self.zdim):
             # Get image
-            order.append(dicom.dcmread(dicom_dir + image_list[i]).ImagePositionPatient[2])
+            order.append(dicom.dcmread(dicom_dir + image_list[i],
+                                       force=True).ImagePositionPatient[2])
 
         max_z = np.max(order)
         min_z = np.min(order)
@@ -126,6 +127,7 @@ class IntensityVolume:
                                      abs(z_step)))
 
         # Get intensity scales
+        # pylint:disable=consider-using-dict-items
         for dicom_key in first_image.keys():
             if first_image[dicom_key].keyword == 'RescaleIntercept':
                 intensity_bias = first_image[dicom_key].value
@@ -144,7 +146,8 @@ class IntensityVolume:
         # Go through every image
         for i in range(self.zdim):
             # Get image
-            current_image = dicom.dcmread(dicom_dir + image_list[sequence[i]]).pixel_array
+            current_image = \
+                dicom.dcmread(dicom_dir + image_list[sequence[i]]).pixel_array
             self.ct_volume[:, :, i] = current_image \
                 * intensity_slope + intensity_bias
 
@@ -212,8 +215,8 @@ class IntensityVolume:
 
         # Add resolution parameters, first get config
         if os.path.isfile(npy_config):
-            npy_config_file = open(npy_config)
-            npy_config = json.load(npy_config_file)
+            with open(npy_config, 'r', encoding='utf8') as npy_config_file:
+                npy_config = json.load(npy_config_file)
         else:
             raise ValueError("No valid config for npy file!")
 

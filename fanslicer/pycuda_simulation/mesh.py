@@ -12,6 +12,8 @@ class Mesh3D:
     """
     Class to process mesh
     """
+
+    # pylint:disable=invalid-name
     def __init__(self, v, t):
         """
         Constructs mesh with vertices v
