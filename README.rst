@@ -14,12 +14,6 @@ Fan-slicer
     :target: https://github.com/UCL/fan-slicer/commits/main
     :alt: Test coverage
 
-.. image:: https://readthedocs.org/projects/fan-slicer/badge/?version=latest
-    :target: http://fan-slicer.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
-
-
-
 Author: João Ramalhinho
 
 Fan-slicer is a python and Pycuda package that enables the sampling of arbitrarily positioned 2D Ultrasound-shaped (fan)
