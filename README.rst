@@ -10,10 +10,6 @@ Fan-slicer
    :target: https://github.com/UCL/fan-slicer/actions/
    :alt: GitLab-CI test status
 
-.. image:: https://github.com/jramalhinho/fan-slicer/badges/main/coverage.svg
-    :target: https://github.com/UCL/fan-slicer/commits/main
-    :alt: Test coverage
-
 Author: João Ramalhinho
 
 Fan-slicer is a python and Pycuda package that enables the sampling of arbitrarily positioned 2D Ultrasound-shaped (fan)
@@ -25,18 +21,19 @@ Fan-slicer is developed at the `Wellcome EPSRC Centre for Interventional and Sur
 `Python Template from Scikit-Surgery`_.
 
 Installing from Github
-^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 
 You can clone the repository using the following command:
 
 ::
 
-    git clone https://github.com/UCL/fan-slicer
+    git clone https://github.com/UCL/fan-slicer.git
 
-Install dependencies preferably in a clean virtual environment by using the following command:
+Install dependencies preferably in a clean virtual environment by using the following commands:
 
 ::
 
+    cd fan-slicer
     pip install -r requirements-pycuda.txt
 
 To run tests, use the following command:
@@ -49,12 +46,35 @@ To run tests, use the following command:
 Installing with pip
 ^^^^^^^^^^
 
-Alternatively, you can also pip install directly from the repository :
+Alternatively, you can also pip install directly from the repository:
 
 ::
 
     pip install git+https://github.com/UCL/fan-slicer
 
+
+Tested environments
+^^^^^^^^^^^^^^^^^^^
+
+Operating systems (**minimum versions tested**)
+* Ubuntu 18.04.5 LTS , with `CUDA Toolkit 10.1`_, gcc 7.5.0 as C++ compiler.
+
+* Windows 10, with `CUDA Toolkit 11.3`_ and `Visual Studio 2019`_ for C++ compiler.
+
+* Windows 10/11 with Windows Subsystem Linux (WSL2), using the following commands:
+    1. Install `CUDA on WSL`_
+    2. Install required libraries:
+
+::
+
+    sudo apt-get install build-essential gcc libboost-all.dev
+
+
+
+
+
+
+Tested on python 3.6, 3.7, 3.8.
 
 Using
 ^^^^^
@@ -67,47 +87,6 @@ This script contains code for the sampling of 10 evenly spaced fan-shaped planes
 * A vessel segmented volume of the same liver (binary volume) that is extracted from vessel tree vtk files.
 Further details on the parameterisation of the planes, pose formulation, and usage of functions
 are provided in the following `guide`_.
-
-Adding dependencies
-^^^^^^^^^^^^^^^^^^^
-
-Dependencies must be specified in requirements.txt, as this is used
-by tox to automatically install the dependencies in a clean virtual
-env in ```fanslicer/.tox```.
-
-Running tests
-^^^^^^^^^^^^^
-Pytest is used for running unit tests, but it is run via tox:
-::
-
-    git clone https://github.com/UCL/fan-slicer.git
-    cd fanslicer
-    tox -e pycuda
-
-and tox will install all dependencies then run pytest and pylint.
-
-
-Linting
-^^^^^^^
-This code conforms to the PEP8 standard. Pylint is used to analyse the code,
-but again, it is run via tox:
-
-::
-
-    tox -e lint
-
-
-Documentation
-^^^^^^^^^^^^^
-Documentation is generated via Sphinx, but again ... you guessed it,
-you run it via tox.
-
-::
-
-    tox -e docs
-
-
-
 
 
 Contributing
@@ -145,3 +124,7 @@ Supported by `Wellcome`_ and `EPSRC`_.
 .. _`contributing guidelines`: https://github.com/UCL/fan-slicer/blob/master/CONTRIBUTING.rst
 .. _`license file`: https://github.com/UCL/fan-slicer/blob/master/LICENSE
 .. _`guide`: https://github.com/UCL/fan-slicer/blob/master/USING.rst
+.. _`Visual Studio 2019`: https://learn.microsoft.com/en-us/visualstudio/releases/2019/release-notes
+.. _`CUDA Toolkit 11.3`: https://developer.nvidia.com/cuda-11.3.0-download-archive?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exe_local
+.. _`CUDA Toolkit 10.1`: https://developer.nvidia.com/cuda-10.1-download-archive-base?target_os=Linux&target_arch=x86_64&target_distro=Ubuntu&target_version=1804&target_type=runfilelocal
+.. _`CUDA on WSL`: https://docs.nvidia.com/cuda/wsl-user-guide/index.html
