@@ -93,7 +93,7 @@ You can pip install directly from the repository as follows:
 
 ::
 
-    pip install git+https://github.com/jramalhinho/fan-slicer
+    pip install git+https://github.com/UCL/fan-slicer
 
 
 
