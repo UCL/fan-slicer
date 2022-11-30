@@ -23,15 +23,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Run tests
-        run: |
-          python -m pytest -v -s ./tests/
-
-      - name: Linting
-        run: |
-          pylint --rcfile=tests/pylintrc fanslicer tests
-
-
   deploy:
     runs-on: ubuntu-18.04
     needs: test
