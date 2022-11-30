@@ -24,6 +24,38 @@ Additionally, slicing of rectangular planes (linear probe case) is also supporte
 Fan-slicer is developed at the `Wellcome EPSRC Centre for Interventional and Surgical Sciences`_ on top of the
 `Python Template from Scikit-Surgery`_.
 
+Installing from Github
+^^^^^^^^^^
+
+You can clone the repository using the following command:
+
+::
+
+    git clone https://github.com/UCL/fan-slicer
+
+Install dependencies preferably in a clean virtual environment by using the following command:
+
+::
+
+    pip install -r requirements-pycuda.txt
+
+To run tests, use the following command:
+
+::
+
+     python -m pytest -v -s ./tests-pycuda
+
+
+Installing with pip
+^^^^^^^^^^
+
+Alternatively, you can also pip install directly from the repository :
+
+::
+
+    pip install git+https://github.com/UCL/fan-slicer
+
+
 Using
 ^^^^^
 
@@ -36,23 +68,12 @@ This script contains code for the sampling of 10 evenly spaced fan-shaped planes
 Further details on the parameterisation of the planes, pose formulation, and usage of functions
 are provided in the following `guide`_.
 
-Cloning
-^^^^^^^
-
-You can clone the repository using the following command:
-
-::
-
-    git clone https://github.com/UCL/fan-slicer
-
-
 Adding dependencies
 ^^^^^^^^^^^^^^^^^^^
 
 Dependencies must be specified in requirements.txt, as this is used
 by tox to automatically install the dependencies in a clean virtual
 env in ```fanslicer/.tox```.
-
 
 Running tests
 ^^^^^^^^^^^^^
@@ -86,14 +107,6 @@ you run it via tox.
     tox -e docs
 
 
-Installing
-----------
-
-You can pip install directly from the repository as follows:
-
-::
-
-    pip install git+https://github.com/UCL/fan-slicer
 
 
 

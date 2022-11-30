@@ -5,9 +5,9 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import fanslicer.pycuda_simulation.mesh as mesh
 import fanslicer.pycuda_simulation.segmented_volume as svol
 import fanslicer.pycuda_simulation.intensity_volume as ivol
+from fanslicer.pycuda_simulation import mesh
 
 # These tests access the data used in the demo script
 
