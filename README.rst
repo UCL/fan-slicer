@@ -56,23 +56,19 @@ Alternatively, you can also pip install directly from the repository:
 Tested environments
 ^^^^^^^^^^^^^^^^^^^
 
-Operating systems (**minimum versions tested**)
+Operating systems
 * Ubuntu 18.04.5 LTS , with `CUDA Toolkit 10.1`_, gcc 7.5.0 as C++ compiler.
 
 * Windows 10, with `CUDA Toolkit 11.3`_ and `Visual Studio 2019`_ for C++ compiler.
 
 * Windows 10/11 with Windows Subsystem Linux (WSL2), using the following commands:
+
     1. Install `CUDA on WSL`_
     2. Install required libraries:
 
 ::
 
     sudo apt-get install build-essential gcc libboost-all.dev
-
-
-
-
-
 
 Tested on python 3.6, 3.7, 3.8.
 
@@ -95,16 +91,12 @@ Contributing
 Please see the `contributing guidelines`_.
 
 
-Useful links
-^^^^^^^^^^^^
-
-* `Source code repository`_
 
 
 Licensing and copyright
 -----------------------
 
-Copyright 2020 University College London.
+Copyright 2022 University College London.
 Fan-slicer is released under the BSD-3 license. Please see the `license file`_ for details.
 
 
