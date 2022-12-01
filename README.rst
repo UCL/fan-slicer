@@ -57,6 +57,7 @@ Tested environments
 ^^^^^^^^^^^^^^^^^^^
 
 Operating systems
+
 * Ubuntu 18.04.5 LTS , with `CUDA Toolkit 10.1`_, gcc 7.5.0 as C++ compiler.
 
 * Windows 10, with `CUDA Toolkit 11.3`_ and `Visual Studio 2019`_ for C++ compiler.
