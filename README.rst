@@ -76,7 +76,7 @@ Using
 ^^^^^
 
 A complete use case example is provided in *simulation_demo.py*.
-This script contains code for the sampling of 10 evenly spaced fan-shaped planes from both 2 volumes:
+This script contains code for the sampling of 10 evenly spaced fan-shaped planes from two volumes:
 
 * An abdominal contrast enhanced CT centered at the liver (a non-binary intensity volume).
 

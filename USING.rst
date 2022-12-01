@@ -116,7 +116,7 @@ to simulate 10 images through the following steps:
 * ``image_num=10`` and ``downsampling=2`` have the same effect as in the ``SegmentedVolume`` above.
 * ``vol_dir="data/CT_test_volume.npy"`` defines the location of the 3D volumetric image to be loaded.
 * ``file_type="npy"`` determines that the loaded volume is a *.npy* file.
-* For the the *.npy* extension, a ``npy_config`` file with the 3D voxel size and bounding box of the volume in **millimiters**
+* For the the *.npy* extension, a ``npy_config`` file with the 3D voxel size and bounding box of the volume in **millimiters**.
 
 3 - Generate a set of evenly spaced poses:
 
