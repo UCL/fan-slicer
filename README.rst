@@ -10,6 +10,11 @@ Fan-slicer
    :target: https://github.com/UCL/fan-slicer/actions/
    :alt: GitLab-CI test status
 
+.. image:: https://img.shields.io/badge/DOI-10.5334%2Fjors.422-blue
+    :target: http://doi.org/10.5334/jors.422
+    :alt: The Jors Paper
+
+
 Author: João Ramalhinho
 
 Fan-slicer is a python and Pycuda package that enables the sampling of arbitrarily positioned 2D Ultrasound-shaped (fan)
@@ -85,6 +90,14 @@ This script contains code for the sampling of 10 evenly spaced fan-shaped planes
 Further details on the parameterisation of the planes, pose formulation, and usage of functions
 are provided in the following `guide`_.
 
+Citing
+^^^^^^
+
+If you use this software in your research, please cite:
+
+Ramalhinho, J., Dowrick, T., Bonmati, E., Clarkson, M. J., 2023.
+Fan-Slicer: A Pycuda Package for Fast Reslicing of Ultrasound Shaped Planes "
+Journal of Open Research Software 11(1), p.3 DOI: http://doi.org/10.5334/jors.422
 
 Contributing
 ^^^^^^^^^^^^
